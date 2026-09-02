@@ -4,16 +4,6 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 
 ## [Unreleased]
 
-### Added
-
-- Bundles. Rules that share a bundle name group into one card with a switch for the whole group.
-- A bundle-level match pattern that overrides the pattern of every rule in the bundle.
-- Edit, copy, and delete buttons on a bundle, and a copy button on a rule.
-- Import from a curl command, with a preview screen to choose which headers and cookies to bring in, edit a name or a value before import, filter a long list by name, and choose which bundle to add them to. Nothing is switched on by default, and Import stays disabled until something is.
-- A bundle collapses to its name and switch by default, and expands on click, so a long list of bundles stays scannable.
-- A consistent color system: a header rule is amber and a cookie rule is teal everywhere, including every field in the add and edit form while that type is selected. Anything not tied to one type, such as the value visibility switch or a bundle's own controls, uses a new violet accent instead of always defaulting to amber.
-- A switch to hide header and cookie values in the popup, on by default.
-
 ## [1.0.0] - 2026-09-02
 
 ### Added
@@ -25,6 +15,12 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 - An error banner in the popup for rules that CookieJab cannot apply.
 - A hint under the match pattern field that explains the scope of each rule type.
 - Removal of the cookies that a cookie rule set when you disable, delete, or change the rule.
+- A switch to hide header and cookie values in the popup, on by default.
+- Bundles. Rules that share a bundle name group into one card with a switch for the whole group. A bundle collapses to its name and switch by default, and expands on click.
+- A bundle-level match pattern that overrides the pattern of every rule in the bundle.
+- Edit, copy, and delete buttons on a bundle, and a copy button on a rule.
+- Import from a curl command, with a preview screen to choose which headers and cookies to bring in, edit a name or a value before import, filter a long list by name, and choose which bundle to add them to. Nothing is switched on by default, and Import stays disabled until something is.
+- A consistent color system: a header rule is amber and a cookie rule is teal everywhere, including every field in the add and edit form while that type is selected. Anything not tied to one type, such as the value visibility switch or a bundle's own controls, uses a violet accent instead of always defaulting to amber.
 
 ### Changed
 
