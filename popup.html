@@ -16,7 +16,14 @@
           <line class="eye-slash" x1="2" y1="2" x2="22" y2="22"/>
         </svg>
       </button>
-      <button id="add-btn">Add rule</button>
+      <div class="split-btn">
+        <button id="add-btn">Add rule</button>
+        <button id="import-btn" type="button" title="More ways to add a rule: import from a curl command">
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -77,6 +84,43 @@
       <button type="button" id="bundle-cancel-btn">Cancel</button>
     </div>
   </form>
+
+  <div id="import-paste" hidden>
+    <p class="hint">Paste a curl command. CookieJab finds its headers and cookies.</p>
+    <textarea id="import-text" class="mono" rows="6" placeholder="curl 'https://example.com/api' -H 'Authorization: Bearer ...'"></textarea>
+    <p id="import-paste-error" class="error" hidden></p>
+    <div class="row actions">
+      <button type="button" id="import-paste-btn">Paste</button>
+      <button type="button" class="primary type-header" id="import-parse-btn">Continue</button>
+      <button type="button" id="import-paste-cancel-btn">Cancel</button>
+    </div>
+  </div>
+
+  <div id="import-preview" hidden>
+    <div class="row">
+      <label class="grow">Match pattern
+        <input id="import-url" class="mono" placeholder="*://example.com/*" />
+      </label>
+    </div>
+    <p id="import-url-error" class="error" hidden></p>
+    <input id="import-filter" placeholder="Filter by name" />
+    <ul id="import-items"></ul>
+    <div class="row">
+      <label class="grow">Import into
+        <select id="import-dest"></select>
+      </label>
+    </div>
+    <div class="row" id="import-new-name-row">
+      <label class="grow">New bundle name
+        <input id="import-new-name" placeholder="Imported" />
+      </label>
+    </div>
+    <p id="import-preview-error" class="error" hidden></p>
+    <div class="row actions">
+      <button type="button" id="import-back-btn">Back</button>
+      <button type="button" class="primary type-header" id="import-confirm-btn">Import</button>
+    </div>
+  </div>
 
   <ul id="rule-list"></ul>
   <p id="empty" class="empty" hidden>No rules yet. Click Add rule to create one.</p>

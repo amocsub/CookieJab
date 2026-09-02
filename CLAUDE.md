@@ -27,7 +27,8 @@ Three runtime files share one ES module:
 
 - `match-pattern.js` parses Chrome match patterns and gives two views of the same pattern. `matchesUrl` compares a URL in JavaScript. `toDnrCondition` builds a `declarativeNetRequest` condition with an anchored `regexFilter` and `requestDomains`. The two views must agree. The `both()` helper in `test/match-pattern.test.js` asserts that agreement, so a change to one view needs the same change in the other.
 - `background.js` is the service worker. It reacts to `chrome.storage.onChanged` on the `rules` key. Header rules become dynamic `declarativeNetRequest` rules, rebuilt from scratch on each change. Cookie rules run on `webNavigation.onBeforeNavigate` for top level frames and call `chrome.cookies.set` on the page origin with path `/`.
-- `popup.js` is the only writer of `rules`. It validates a rule before it saves it and stores the canonical pattern from `parseMatchPattern`.
+- `popup.js` is the only writer of `rules`. It validates a rule before it saves it and stores the canonical pattern from `parseMatchPattern`. Rules that share a `bundle` text group into one card with a shared switch; `bundleUrl`, when set on a bundle, overrides the `url` of every rule in it for matching, though each rule keeps its own `url` saved.
+- `curl-import.js` parses a pasted curl command into a url, headers, and cookies for the import screen in `popup.js`. It has no DOM dependency, so it is tested directly with `node --test`.
 
 State lives in `chrome.storage.local` under three keys. `rules` is the rule list. `lastError` is written by the service worker and shown as a banner in the popup. `appliedCookies` maps a rule id to the cookies that the rule set. When a cookie rule is deleted, disabled, or its target changes, the service worker removes those cookies. `rulesLosingCookies` in `background.js` computes that from the old and new rule lists in the storage change event.
 

@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": "github:amocsub/CookieJab",
   "scripts": {
-    "check": "node --check background.js && node --check popup.js && node --check match-pattern.js && node --check scripts/e2e.mjs && node -e \"JSON.parse(require('fs').readFileSync('manifest.json','utf8'))\"",
+    "check": "node --check background.js && node --check popup.js && node --check match-pattern.js && node --check curl-import.js && node --check scripts/e2e.mjs && node -e \"JSON.parse(require('fs').readFileSync('manifest.json','utf8'))\"",
     "test": "node --test",
     "build": "scripts/build.sh"
   }

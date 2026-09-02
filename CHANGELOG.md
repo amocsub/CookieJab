@@ -4,6 +4,14 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 
 ## [Unreleased]
 
+### Added
+
+- Bundles. Rules that share a bundle name group into one card with a switch for the whole group.
+- A bundle-level match pattern that overrides the pattern of every rule in the bundle.
+- Edit, copy, and delete buttons on a bundle, and a copy button on a rule.
+- Import from a curl command, with a preview screen to choose which headers and cookies to bring in, edit a name or a value before import, filter a long list by name, and choose which bundle to add them to.
+- A switch to hide header and cookie values in the popup, on by default.
+
 ## [1.0.0] - 2026-09-02
 
 ### Added

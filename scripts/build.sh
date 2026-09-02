@@ -10,6 +10,7 @@ files=(
   manifest.json
   background.js
   match-pattern.js
+  curl-import.js
   popup.css
   popup.html
   popup.js

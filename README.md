@@ -19,13 +19,25 @@ The listing is not published yet. This section will link to it after the first r
 ## Usage
 
 1. Click Add rule.
-2. Enter a name.
+2. Enter a bundle name, to group this rule with related rules. Leave it empty for a standalone rule.
 3. Select the type: Header or Cookie.
 4. Enter the match pattern. See Match Pattern Syntax.
 5. Enter the header or cookie name and the value.
 6. Click Save.
 
 The switch on a rule enables or disables the rule. Header rules apply to new requests at once. Cookie rules apply on the next navigation to a page that matches. The match pattern of a cookie rule decides when CookieJab sets the cookie. The browser then sends the cookie to all paths on that host.
+
+Click copy on a rule to open the form prefilled with its values and a blank id, so a new rule for the same host takes only a few changed fields.
+
+## Bundles
+
+Rules that share a bundle name group into one card with a switch that enables or disables every rule in it at once. Each rule keeps its own switch too, so one rule inside an enabled bundle can still be turned off.
+
+Click edit on a bundle to rename it or to set a match pattern for the whole bundle. When a bundle has its own match pattern, it replaces the pattern of every rule inside for matching purposes. Each rule keeps its own pattern saved, and that pattern applies again if the bundle pattern is removed. Copy on a bundle duplicates every rule in it under a new name. Delete on a bundle removes every rule in it.
+
+## Import From A curl Command
+
+Click the arrow next to Add rule, paste a curl command, and click Continue. CookieJab reads the command for its web address, its headers, and its cookies, including a Cookie header, and shows every one of them with a switch, a name, and a value that you can edit before you import. Browser boilerplate headers, such as `Accept-Encoding` or `User-Agent`, start unswitched, so a paste from a browser dev tools panel does not create a rule for each of them by default. A switched entry moves to the top of the list, and an unswitched one dims, so what you are about to import stays easy to see in a long list. The filter field narrows the list to names that contain the text you type, without dropping anything you already switched. Switch on the entries that you want, edit a name or a value if you need to, adjust the match pattern if needed, choose an existing bundle or type a name for a new one, then click Import.
 
 ## Match Pattern Syntax
 

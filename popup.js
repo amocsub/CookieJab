@@ -1,4 +1,5 @@
 import { parseMatchPattern, toDnrCondition } from "./match-pattern.js";
+import { parseCurl, defaultPatternFor, NOISY_HEADERS } from "./curl-import.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -10,6 +11,9 @@ const lastErrorEl = $("#last-error");
 const visibilityBtn = $("#visibility-btn");
 const bundleFormEl = $("#bundle-form");
 const bundleFormErrorEl = $("#bundle-form-error");
+const importPasteEl = $("#import-paste");
+const importPreviewEl = $("#import-preview");
+let importItems = [];
 
 const TYPES = new Set(["header", "cookie"]);
 const HINTS = {
@@ -215,6 +219,8 @@ function showHint() {
 
 function showForm(rule) {
   hideBundleForm();
+  hideImportPaste();
+  hideImportPreview();
   $("#rule-id").value = rule?.id ?? "";
   $("#f-bundle").value = bundleOf(rule ?? {});
   setType(rule?.type ?? "header");
@@ -241,6 +247,8 @@ function hideForm() {
 
 function showBundleForm(name, rules) {
   hideForm();
+  hideImportPaste();
+  hideImportPreview();
   $("#b-old-name").value = name;
   $("#b-name").value = name;
   $("#b-url").value = rules.find((r) => r.bundleUrl)?.bundleUrl ?? "";
@@ -253,6 +261,145 @@ function hideBundleForm() {
   bundleFormEl.reset();
   showBundleFormError(null);
   bundleFormEl.hidden = true;
+}
+
+function showImportPasteError(message) {
+  const el = $("#import-paste-error");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
+function showImportUrlError(message) {
+  const el = $("#import-url-error");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
+function showImportPreviewError(message) {
+  const el = $("#import-preview-error");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
+function showImportPaste() {
+  hideForm();
+  hideBundleForm();
+  hideImportPreview();
+  $("#import-text").value = "";
+  showImportPasteError(null);
+  importPasteEl.hidden = false;
+  $("#import-text").focus();
+}
+
+function hideImportPaste() {
+  importPasteEl.hidden = true;
+  $("#import-text").value = "";
+  showImportPasteError(null);
+}
+
+function importField(className, value, idx, field, type) {
+  const input = document.createElement("input");
+  input.className = className;
+  input.value = value;
+  if (type) input.type = type;
+  input.dataset.importIndex = String(idx);
+  input.dataset.importField = field;
+  return input;
+}
+
+function renderImportItem(item, idx) {
+  const li = el("li", `import-item type-${item.type}` + (item.checked ? "" : " unselected"));
+
+  const toggle = el("label", "rule-toggle bundle-toggle");
+  const checkbox = el("input");
+  checkbox.type = "checkbox";
+  checkbox.checked = item.checked;
+  checkbox.disabled = !item.validKey;
+  checkbox.dataset.importIndex = String(idx);
+  checkbox.setAttribute("aria-label", `${item.checked ? "Exclude" : "Include"} ${item.name}`);
+  if (!item.validKey) checkbox.title = "Not imported. This name has characters that are not permitted.";
+  toggle.append(checkbox);
+
+  const kv = el("div", "rule-kv import-kv");
+  kv.append(
+    importField("mono import-name", item.name, idx, "name"),
+    importField("mono import-value", item.value, idx, "value", hideValues ? "password" : "text")
+  );
+
+  li.append(toggle, el("span", "rule-code", CODES[item.type]), kv);
+  return li;
+}
+
+// Selected items sort to the top, so what will be imported is easy to see
+// at a glance. The filter narrows which items show, without discarding any.
+function renderImportItems() {
+  const filter = $("#import-filter").value.trim().toLowerCase();
+  const rows = importItems
+    .map((item, idx) => ({ item, idx }))
+    .filter(({ item }) => !filter || item.name.toLowerCase().includes(filter))
+    .sort((a, b) => Number(b.item.checked) - Number(a.item.checked));
+  $("#import-items").replaceChildren(...rows.map(({ item, idx }) => renderImportItem(item, idx)));
+}
+
+async function showImportPreview(parsed, defaultUrl) {
+  importItems = [
+    ...parsed.headers.map((h) => ({
+      type: "header",
+      name: h.name,
+      value: h.value,
+      checked: !NOISY_HEADERS.has(h.name.toLowerCase()) && TOKEN.test(h.name),
+      validKey: TOKEN.test(h.name)
+    })),
+    ...parsed.cookies.map((c) => ({
+      type: "cookie",
+      name: c.name,
+      value: c.value,
+      checked: TOKEN.test(c.name),
+      validKey: TOKEN.test(c.name)
+    }))
+  ];
+  $("#import-filter").value = "";
+  renderImportItems();
+
+  $("#import-url").value = defaultUrl;
+  showImportUrlError(null);
+
+  const rules = await getRules();
+  const bundles = [...new Set(rules.map(bundleOf).filter(Boolean))];
+  const destSel = $("#import-dest");
+  destSel.replaceChildren();
+  const newOpt = el("option", null, "New bundle");
+  newOpt.value = "";
+  destSel.append(newOpt);
+  for (const b of bundles) {
+    const o = el("option", null, b);
+    o.value = b;
+    destSel.append(o);
+  }
+  destSel.value = "";
+
+  let host = "";
+  try {
+    host = new URL(parsed.url).hostname;
+  } catch {
+    // The paste screen already required a valid url before reaching here.
+  }
+  $("#import-new-name").value = host;
+  updateImportDestRow();
+
+  showImportPreviewError(null);
+  importPasteEl.hidden = true;
+  importPreviewEl.hidden = false;
+}
+
+function hideImportPreview() {
+  importPreviewEl.hidden = true;
+  showImportPreviewError(null);
+  importItems = [];
+}
+
+function updateImportDestRow() {
+  $("#import-new-name-row").hidden = $("#import-dest").value !== "";
 }
 
 // Returns an error message when the pattern cannot back a header rule, else null.
@@ -292,6 +439,134 @@ visibilityBtn.addEventListener("click", async () => {
   hideValues = !hideValues;
   await chrome.storage.local.set({ hideValues });
   applyVisibility();
+  render();
+  if (!importPreviewEl.hidden) renderImportItems();
+});
+
+$("#import-btn").addEventListener("click", () => {
+  if (!importPasteEl.hidden || !importPreviewEl.hidden) {
+    hideImportPaste();
+    hideImportPreview();
+  } else {
+    showImportPaste();
+  }
+});
+
+$("#import-paste-btn").addEventListener("click", async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) $("#import-text").value = text;
+  } catch {
+    // Clipboard access was not available. The user can paste with the keyboard instead.
+  }
+});
+
+$("#import-paste-cancel-btn").addEventListener("click", hideImportPaste);
+
+$("#import-parse-btn").addEventListener("click", () => {
+  const parsed = parseCurl($("#import-text").value);
+  const pattern = defaultPatternFor(parsed.url ?? "");
+  if (!pattern) {
+    showImportPasteError("No web address was found in that text.");
+    return;
+  }
+  if (!parsed.headers.length && !parsed.cookies.length) {
+    showImportPasteError("No headers or cookies were found in that command.");
+    return;
+  }
+  showImportPreview(parsed, pattern);
+});
+
+$("#import-items").addEventListener("change", (e) => {
+  const idx = e.target.dataset.importIndex;
+  if (idx === undefined || e.target.type !== "checkbox") return;
+  importItems[Number(idx)].checked = e.target.checked;
+  renderImportItems();
+});
+
+// Edits patch the item state and the checkbox in place, so the field the
+// user is typing in is never replaced and never loses focus mid-keystroke.
+$("#import-items").addEventListener("input", (e) => {
+  const idx = e.target.dataset.importIndex;
+  const field = e.target.dataset.importField;
+  if (idx === undefined || !field) return;
+  const item = importItems[Number(idx)];
+  item[field] = e.target.value;
+  if (field === "name") {
+    item.validKey = TOKEN.test(item.name);
+    if (!item.validKey) item.checked = false;
+    const row = e.target.closest(".import-item");
+    const checkbox = row.querySelector('input[type="checkbox"]');
+    checkbox.checked = item.checked;
+    checkbox.disabled = !item.validKey;
+    checkbox.title = item.validKey ? "" : "Not imported. This name has characters that are not permitted.";
+    row.classList.toggle("unselected", !item.checked);
+  }
+});
+
+$("#import-filter").addEventListener("input", renderImportItems);
+
+$("#import-dest").addEventListener("change", updateImportDestRow);
+
+$("#import-back-btn").addEventListener("click", () => {
+  importPreviewEl.hidden = true;
+  importPasteEl.hidden = false;
+  $("#import-text").focus();
+});
+
+$("#import-confirm-btn").addEventListener("click", async () => {
+  let pattern;
+  try {
+    pattern = parseMatchPattern($("#import-url").value.trim());
+  } catch (e) {
+    showImportUrlError(e.message);
+    return;
+  }
+  showImportUrlError(null);
+
+  const selected = importItems.filter((item) => item.checked && item.validKey);
+  if (!selected.length) {
+    showImportPreviewError("Select at least one item to import.");
+    return;
+  }
+
+  if (selected.some((item) => item.type === "header")) {
+    const err = await checkHeaderRegexSupport(pattern);
+    if (err) {
+      showImportPreviewError(err);
+      return;
+    }
+  }
+
+  const rules = await getRules();
+  const destValue = $("#import-dest").value;
+  let bundle;
+  let bundleUrl = "";
+  if (destValue) {
+    bundle = destValue;
+    bundleUrl = rules.find((r) => bundleOf(r) === bundle && r.bundleUrl)?.bundleUrl ?? "";
+  } else {
+    bundle = $("#import-new-name").value.trim();
+    if (!bundle) {
+      showImportPreviewError("Bundle name is required.");
+      return;
+    }
+  }
+
+  const created = selected.map((item) => ({
+    id: crypto.randomUUID(),
+    enabled: true,
+    bundle,
+    bundleUrl,
+    type: item.type,
+    url: pattern.canonical,
+    key: item.name,
+    value: item.value
+  }));
+
+  await setRules([...rules, ...created]);
+  hideImportPaste();
+  hideImportPreview();
   render();
 });
 
