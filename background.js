@@ -1,5 +1,7 @@
 // Rules live in chrome.storage.local under "rules" as an array of:
-//   { id, enabled, type: "header"|"cookie", name, url, key, value }
+//   { id, enabled, type: "header"|"cookie", bundle, bundleUrl, url, key, value }
+// bundleUrl, when set, is the match pattern that applies for every rule
+// in the same bundle, in place of each rule's own url.
 // "appliedCookies" maps a rule id to the cookies that the rule set, as { url, name }.
 // The popup shows the value of "lastError" in chrome.storage.local.
 
@@ -21,16 +23,20 @@ function label(rule) {
   return rule.name || rule.key || rule.id;
 }
 
+function effectiveUrl(rule) {
+  return rule.bundleUrl || rule.url;
+}
+
 // Pattern errors are collected for all rules, not only for header rules.
 function toDnrRules(rules) {
   const dnr = [];
   const errors = [];
   let id = 1;
   for (const r of rules) {
-    if (!r.url || !r.key) continue;
+    if (!effectiveUrl(r) || !r.key) continue;
     let pattern;
     try {
-      pattern = parseMatchPattern(r.url);
+      pattern = parseMatchPattern(effectiveUrl(r));
     } catch (e) {
       errors.push(`${label(r)}: ${e.message}`);
       continue;
@@ -109,7 +115,7 @@ function rulesLosingCookies(oldRules, newRules) {
     .filter((o) => {
       if (o.type !== "cookie") return false;
       const n = byId.get(o.id);
-      return !n || (o.enabled && !n.enabled) || n.type !== o.type || n.key !== o.key || n.url !== o.url;
+      return !n || (o.enabled && !n.enabled) || n.type !== o.type || n.key !== o.key || effectiveUrl(n) !== effectiveUrl(o);
     })
     .map((o) => o.id);
 }
@@ -125,10 +131,10 @@ async function applyCookies(url) {
 
   const rules = await getRules();
   for (const r of rules) {
-    if (!r.enabled || r.type !== "cookie" || !r.url || !r.key) continue;
+    if (!r.enabled || r.type !== "cookie" || !effectiveUrl(r) || !r.key) continue;
     let pattern;
     try {
-      pattern = parseMatchPattern(r.url);
+      pattern = parseMatchPattern(effectiveUrl(r));
     } catch {
       continue;
     }

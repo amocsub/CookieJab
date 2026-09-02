@@ -25,8 +25,8 @@
   <form id="rule-form" hidden>
     <input type="hidden" id="rule-id" />
     <div class="row">
-      <label class="grow">Name
-        <input id="f-name" placeholder="Staging auth token" />
+      <label class="grow">Bundle
+        <input id="f-bundle" placeholder="Staging (optional)" />
       </label>
       <label>Type
         <input type="hidden" id="f-type" value="header" />
@@ -42,6 +42,7 @@
       </label>
     </div>
     <p id="f-url-hint" class="hint"></p>
+    <p id="f-url-override" class="hint warn" hidden></p>
     <div class="row">
       <label class="grow">Key
         <input id="f-key" class="mono" placeholder="Authorization / session_id" />
@@ -54,6 +55,26 @@
     <div class="row actions">
       <button type="submit" class="primary type-header" id="save-btn">Save</button>
       <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+  </form>
+
+  <form id="bundle-form" hidden>
+    <input type="hidden" id="b-old-name" />
+    <div class="row">
+      <label class="grow">Bundle name
+        <input id="b-name" placeholder="Staging" />
+      </label>
+    </div>
+    <div class="row">
+      <label class="grow">Bundle match pattern
+        <input id="b-url" class="mono" placeholder="*://*.example.com/*" />
+      </label>
+    </div>
+    <p class="hint">Optional. Replaces the match pattern of every rule in this bundle.</p>
+    <p id="bundle-form-error" class="error" hidden></p>
+    <div class="row actions">
+      <button type="submit" class="primary" id="bundle-save-btn">Save</button>
+      <button type="button" id="bundle-cancel-btn">Cancel</button>
     </div>
   </form>
 
