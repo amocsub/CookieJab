@@ -7,6 +7,7 @@ const emptyEl = $("#empty");
 const formEl = $("#rule-form");
 const formErrorEl = $("#form-error");
 const lastErrorEl = $("#last-error");
+const visibilityBtn = $("#visibility-btn");
 
 const TYPES = new Set(["header", "cookie"]);
 const HINTS = {
@@ -33,6 +34,8 @@ function el(tag, className, text) {
 }
 
 const CODES = { header: "HDR", cookie: "CKI", invalid: "INV" };
+const MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022";
+let hideValues = true;
 
 function renderRule(r) {
   const type = TYPES.has(r.type) ? r.type : "invalid";
@@ -52,7 +55,9 @@ function renderRule(r) {
   const url = el("div", "rule-url", r.url);
   url.title = r.url;
   const kv = el("div", "rule-kv");
-  kv.append(el("span", "k", r.key), el("span", "v", r.value ?? ""));
+  const valueEl = el("span", "v", hideValues ? MASK : (r.value ?? ""));
+  if (hideValues) valueEl.title = "Value hidden";
+  kv.append(el("span", "k", r.key), valueEl);
   body.append(top, url, kv);
 
   const actions = el("div", "rule-actions");
@@ -74,6 +79,18 @@ async function render() {
   emptyEl.hidden = rules.length > 0;
   lastErrorEl.hidden = !lastError;
   lastErrorEl.textContent = lastError || "";
+}
+
+function applyVisibility() {
+  visibilityBtn.setAttribute("aria-pressed", String(hideValues));
+  visibilityBtn.title = hideValues ? "Show values" : "Hide values";
+  $("#f-value").type = hideValues ? "password" : "text";
+}
+
+async function loadVisibility() {
+  const { hideValues: v = true } = await chrome.storage.local.get("hideValues");
+  hideValues = v;
+  applyVisibility();
 }
 
 function showFormError(message) {
@@ -99,6 +116,7 @@ function showForm(rule) {
   $("#rule-id").value = rule?.id ?? "";
   $("#f-name").value = rule?.name ?? "";
   setType(rule?.type ?? "header");
+  applyVisibility();
   $("#f-url").value = rule?.url ?? "";
   $("#f-key").value = rule?.key ?? "";
   $("#f-value").value = rule?.value ?? "";
@@ -138,6 +156,13 @@ async function validate(rule) {
 $("#add-btn").addEventListener("click", () => {
   if (formEl.hidden) showForm(null);
   else hideForm();
+});
+
+visibilityBtn.addEventListener("click", async () => {
+  hideValues = !hideValues;
+  await chrome.storage.local.set({ hideValues });
+  applyVisibility();
+  render();
 });
 
 $("#cancel-btn").addEventListener("click", hideForm);
@@ -214,4 +239,5 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.lastError) render();
 });
 
+loadVisibility();
 render();

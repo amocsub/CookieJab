@@ -28,6 +28,7 @@ header {
   justify-content: space-between;
   margin-bottom: 10px;
 }
+.header-actions { display: flex; gap: 6px; }
 
 h1 { font: 600 16px/1 var(--mono); margin: 0; letter-spacing: -0.2px; }
 
@@ -48,6 +49,11 @@ button.primary.type-cookie { background: var(--teal); border-color: var(--teal);
 button.text { border: none; padding: 2px 4px; font-family: var(--mono); color: var(--muted); }
 button.text:hover { color: var(--ink); border-color: transparent; }
 button.text.danger:hover { color: var(--brick); }
+
+button.icon-only { display: grid; place-items: center; padding: 5px; }
+button.icon-only[aria-pressed="true"] { color: var(--amber); border-color: var(--amber); }
+button.icon-only .eye-slash { opacity: 1; }
+button.icon-only[aria-pressed="false"] .eye-slash { opacity: 0; }
 
 #rule-form {
   background: var(--surface);
