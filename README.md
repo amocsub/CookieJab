@@ -83,6 +83,13 @@ npm test        # Run the match pattern tests
 npm run build   # Build dist/cookiejab-<version>.zip
 ```
 
+`scripts/e2e.mjs` loads the extension in a headless browser and checks header and cookie injection against a local echo server. Google Chrome ignores `--load-extension` since version 137, so it needs Chrome for Testing:
+
+```sh
+npx @puppeteer/browsers install chrome@stable
+CHROME="<path printed by the install command>" node scripts/e2e.mjs
+```
+
 `store/` holds the Chrome Web Store listing text and the sources of the store images. Run `store/render.sh` to render the images and the 128 px icon with headless Chrome.
 
 ## Release

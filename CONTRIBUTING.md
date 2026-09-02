@@ -4,7 +4,7 @@
 
 1. Clone the repository.
 2. Open `chrome://extensions`, enable Developer mode, and load the repository folder with Load unpacked.
-3. Run `npm test` before you open a pull request. Node.js 20 or later is required. There are no dependencies to install.
+3. Run `npm test` before you open a pull request. Run `scripts/e2e.mjs` when you change `background.js` or `popup.js`. See the Development section of the README. Node.js 20 or later is required. There are no dependencies to install.
 
 ## Rules
 
