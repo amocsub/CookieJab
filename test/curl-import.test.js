@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { tokenizeShellCommand, parseCurl, defaultPatternFor, NOISY_HEADERS } from "../curl-import.js";
+import { tokenizeShellCommand, parseCurl, defaultPatternFor } from "../curl-import.js";
 
 test("tokenizes single and double quoted words", () => {
   assert.deepEqual(tokenizeShellCommand(`curl 'https://a.com' -H "X-A: 1"`),
@@ -92,11 +92,4 @@ test("text with no curl command takes the first bare word, which the caller must
 test("defaultPatternFor builds a whole-host pattern from the url", () => {
   assert.equal(defaultPatternFor("https://api.example.com/v1/users?x=1"), "*://api.example.com/*");
   assert.equal(defaultPatternFor("not a url"), "");
-});
-
-test("NOISY_HEADERS flags common browser boilerplate but not Authorization or a custom header", () => {
-  assert.ok(NOISY_HEADERS.has("accept-encoding"));
-  assert.ok(NOISY_HEADERS.has("user-agent"));
-  assert.ok(!NOISY_HEADERS.has("authorization"));
-  assert.ok(!NOISY_HEADERS.has("x-feature"));
 });

@@ -1,5 +1,5 @@
 import { parseMatchPattern, toDnrCondition } from "./match-pattern.js";
-import { parseCurl, defaultPatternFor, NOISY_HEADERS } from "./curl-import.js";
+import { parseCurl, defaultPatternFor } from "./curl-import.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -119,12 +119,33 @@ function renderBundleMember(r) {
   return li;
 }
 
+// A control inside <summary> must cancel the disclosure's own click
+// behavior, or clicking it would also toggle the bundle open or shut.
+// The checkbox needs its click to keep bubbling, since its own logic
+// listens for "change", a separate event, so it only stops propagation.
+// A button's own logic listens for "click" itself through the same
+// delegated listener the disclosure would otherwise consume, so it
+// cancels just the browser's default toggle action instead.
+function stopSummaryToggleForCheckbox(el) {
+  el.addEventListener("click", (e) => e.stopPropagation());
+  return el;
+}
+
+function stopSummaryToggleForButton(el) {
+  el.addEventListener("click", (e) => e.preventDefault());
+  return el;
+}
+
 function renderBundle(name, rules) {
   const on = rules.filter((r) => r.enabled).length;
   const bundleUrl = rules.find((r) => r.bundleUrl)?.bundleUrl ?? "";
   const li = el("li", "bundle");
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.className = "bundle-head";
 
-  const head = el("div", "bundle-head");
+  const chevron = el("span", "bundle-chevron", "\u25b8");
+
   const toggle = el("label", "rule-toggle bundle-toggle");
   const checkbox = el("input");
   checkbox.type = "checkbox";
@@ -138,7 +159,7 @@ function renderBundle(name, rules) {
   }
   checkbox.dataset.bundleToggle = name;
   checkbox.setAttribute("aria-label", `${checkbox.checked ? "Disable" : "Enable"} bundle ${name}`);
-  toggle.append(checkbox);
+  toggle.append(stopSummaryToggleForCheckbox(checkbox));
 
   const actions = el("div", "bundle-actions");
   const edit = el("button", "text", "edit");
@@ -150,22 +171,23 @@ function renderBundle(name, rules) {
   const del = el("button", "text danger", "del");
   del.type = "button";
   del.dataset.bundleDel = name;
-  actions.append(edit, copy, del);
+  actions.append(stopSummaryToggleForButton(edit), stopSummaryToggleForButton(copy), stopSummaryToggleForButton(del));
 
-  head.append(toggle, el("span", "bundle-name", name), actions);
+  summary.append(chevron, toggle, el("span", "bundle-name", name), actions);
 
-  const liBody = [head];
+  const rest = [];
   if (bundleUrl) {
     const urlLine = el("div", "bundle-url", bundleUrl);
     urlLine.title = "Applies to every rule in this bundle.";
-    liBody.push(urlLine);
+    rest.push(urlLine);
   }
 
   const members = el("ul", "bundle-members");
   members.append(...rules.map(renderBundleMember));
-  liBody.push(members);
+  rest.push(members);
 
-  li.append(...liBody);
+  details.append(summary, ...rest);
+  li.append(details);
   return li;
 }
 
@@ -210,6 +232,8 @@ function setType(type) {
   }
   $("#save-btn").classList.toggle("type-header", type === "header");
   $("#save-btn").classList.toggle("type-cookie", type === "cookie");
+  formEl.classList.toggle("type-header", type === "header");
+  formEl.classList.toggle("type-cookie", type === "cookie");
   showHint();
 }
 
@@ -330,6 +354,10 @@ function renderImportItem(item, idx) {
   return li;
 }
 
+function updateImportConfirmState() {
+  $("#import-confirm-btn").disabled = !importItems.some((item) => item.checked);
+}
+
 // Selected items sort to the top, so what will be imported is easy to see
 // at a glance. The filter narrows which items show, without discarding any.
 function renderImportItems() {
@@ -339,24 +367,13 @@ function renderImportItems() {
     .filter(({ item }) => !filter || item.name.toLowerCase().includes(filter))
     .sort((a, b) => Number(b.item.checked) - Number(a.item.checked));
   $("#import-items").replaceChildren(...rows.map(({ item, idx }) => renderImportItem(item, idx)));
+  updateImportConfirmState();
 }
 
 async function showImportPreview(parsed, defaultUrl) {
   importItems = [
-    ...parsed.headers.map((h) => ({
-      type: "header",
-      name: h.name,
-      value: h.value,
-      checked: !NOISY_HEADERS.has(h.name.toLowerCase()) && TOKEN.test(h.name),
-      validKey: TOKEN.test(h.name)
-    })),
-    ...parsed.cookies.map((c) => ({
-      type: "cookie",
-      name: c.name,
-      value: c.value,
-      checked: TOKEN.test(c.name),
-      validKey: TOKEN.test(c.name)
-    }))
+    ...parsed.headers.map((h) => ({ type: "header", name: h.name, value: h.value, checked: false, validKey: TOKEN.test(h.name) })),
+    ...parsed.cookies.map((c) => ({ type: "cookie", name: c.name, value: c.value, checked: false, validKey: TOKEN.test(c.name) }))
   ];
   $("#import-filter").value = "";
   renderImportItems();
@@ -501,6 +518,7 @@ $("#import-items").addEventListener("input", (e) => {
     checkbox.disabled = !item.validKey;
     checkbox.title = item.validKey ? "" : "Not imported. This name has characters that are not permitted.";
     row.classList.toggle("unselected", !item.checked);
+    updateImportConfirmState();
   }
 });
 

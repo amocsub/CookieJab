@@ -9,7 +9,9 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 - Bundles. Rules that share a bundle name group into one card with a switch for the whole group.
 - A bundle-level match pattern that overrides the pattern of every rule in the bundle.
 - Edit, copy, and delete buttons on a bundle, and a copy button on a rule.
-- Import from a curl command, with a preview screen to choose which headers and cookies to bring in, edit a name or a value before import, filter a long list by name, and choose which bundle to add them to.
+- Import from a curl command, with a preview screen to choose which headers and cookies to bring in, edit a name or a value before import, filter a long list by name, and choose which bundle to add them to. Nothing is switched on by default, and Import stays disabled until something is.
+- A bundle collapses to its name and switch by default, and expands on click, so a long list of bundles stays scannable.
+- A consistent color system: a header rule is amber and a cookie rule is teal everywhere, including every field in the add and edit form while that type is selected. Anything not tied to one type, such as the value visibility switch or a bundle's own controls, uses a new violet accent instead of always defaulting to amber.
 - A switch to hide header and cookie values in the popup, on by default.
 
 ## [1.0.0] - 2026-09-02

@@ -98,16 +98,6 @@ const FLAG_WITH_ARG = new Set([
   "--url"
 ]);
 
-// Headers that a browser adds on every request. They rarely carry a secret,
-// so an import screen unchecks them by default without hiding them.
-export const NOISY_HEADERS = new Set([
-  "host", "content-length", "content-type", "connection", "accept",
-  "accept-encoding", "accept-language", "user-agent", "origin", "referer",
-  "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest", "sec-fetch-user",
-  "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform",
-  "upgrade-insecure-requests", "dnt", "pragma", "cache-control", "te", "priority"
-]);
-
 /**
  * Parses a curl command into { url, headers, cookies }.
  * headers and cookies are arrays of { name, value }. A Cookie header and a

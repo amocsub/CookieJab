@@ -8,6 +8,7 @@
   --amber-ink: #17180f;
   --teal: #74a79b;
   --brick: #c06a52;
+  --violet: #9d8ec9;
   --mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
 }
 
@@ -41,12 +42,12 @@ button {
   cursor: pointer;
   font: 12px system-ui, sans-serif;
 }
-button:hover { border-color: var(--amber); }
-button:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
-button.primary { font-weight: 600; color: var(--amber-ink); }
+button:hover { border-color: var(--violet); }
+button:focus-visible { outline: 2px solid var(--violet); outline-offset: 1px; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.primary { font-weight: 600; color: var(--amber-ink); background: var(--violet); border-color: var(--violet); }
 button.primary.type-header { background: var(--amber); border-color: var(--amber); }
 button.primary.type-cookie { background: var(--teal); border-color: var(--teal); }
-#bundle-save-btn { background: var(--amber); border-color: var(--amber); }
 button.text { border: none; padding: 2px 4px; font-family: var(--mono); color: var(--muted); }
 button.text:hover { color: var(--ink); border-color: transparent; }
 button.text.danger:hover { color: var(--brick); }
@@ -57,7 +58,7 @@ button.icon-only { display: grid; place-items: center; padding: 5px; }
 .split-btn > button { border-radius: 0; }
 .split-btn > #add-btn { border-radius: 3px 0 0 3px; }
 .split-btn > #import-btn { border-radius: 0 3px 3px 0; border-left: none; padding: 5px 8px; display: flex; align-items: center; }
-button.icon-only[aria-pressed="true"] { color: var(--amber); border-color: var(--amber); }
+button.icon-only[aria-pressed="true"] { color: var(--violet); border-color: var(--violet); }
 button.icon-only .eye-slash { opacity: 1; }
 button.icon-only[aria-pressed="false"] .eye-slash { opacity: 0; }
 
@@ -85,7 +86,7 @@ input {
   font-size: 12px;
   width: 100%;
 }
-input:focus-visible { outline: 2px solid var(--amber); outline-offset: -1px; }
+input:focus-visible { outline: 2px solid var(--violet); outline-offset: -1px; }
 input.mono { font-family: var(--mono); }
 code { background: var(--bg); padding: 0 3px; border-radius: 2px; font-family: var(--mono); }
 
@@ -98,7 +99,7 @@ select {
   font-size: 12px;
   width: 100%;
 }
-select:focus-visible { outline: 2px solid var(--amber); outline-offset: -1px; }
+select:focus-visible { outline: 2px solid var(--violet); outline-offset: -1px; }
 
 textarea {
   background: var(--bg);
@@ -111,7 +112,7 @@ textarea {
   resize: vertical;
   margin-bottom: 8px;
 }
-textarea:focus-visible { outline: 2px solid var(--amber); outline-offset: -1px; }
+textarea:focus-visible { outline: 2px solid var(--violet); outline-offset: -1px; }
 textarea.mono { font-family: var(--mono); }
 
 .seg { display: flex; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; width: fit-content; }
@@ -126,6 +127,14 @@ ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: col
 .type-cookie { --rule-accent: var(--teal); }
 .type-invalid { --rule-accent: var(--muted); }
 .disabled { --rule-accent: var(--muted); opacity: 0.55; }
+
+/* A rule form takes the color of the type currently selected in it,
+   so every field in the form, not only the Save button, matches. A
+   bundle can mix types, so its own controls stay violet instead. */
+#rule-form.type-header input:focus-visible { outline-color: var(--amber); }
+#rule-form.type-cookie input:focus-visible { outline-color: var(--teal); }
+.bundle { --rule-accent: var(--violet); }
+.import-item input:focus-visible { outline-color: var(--rule-accent); }
 
 .rule, .bundle-member {
   display: flex;
@@ -147,7 +156,11 @@ ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: col
   border-radius: 2px;
   padding: 8px 10px;
 }
+.bundle summary { list-style: none; cursor: pointer; }
+.bundle summary::-webkit-details-marker { display: none; }
 .bundle-head { display: flex; align-items: center; gap: 8px; }
+.bundle-chevron { flex: none; color: var(--muted); font-size: 16px; line-height: 1; transition: transform 0.15s; }
+.bundle details[open] .bundle-chevron { transform: rotate(90deg); }
 .bundle-name { font-weight: 600; font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bundle-url { color: var(--muted); font-family: var(--mono); font-size: 11px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bundle-members { list-style: none; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
@@ -189,7 +202,7 @@ ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: col
   border-color: var(--line);
 }
 .rule-toggle input[type="checkbox"]:indeterminate::after { content: "mix"; }
-.rule-toggle input[type="checkbox"]:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+.rule-toggle input[type="checkbox"]:focus-visible { outline: 2px solid var(--rule-accent); outline-offset: 1px; }
 
 .rule-toggle.bundle-toggle input[type="checkbox"] {
   width: 14px;
