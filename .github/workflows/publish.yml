@@ -32,6 +32,8 @@ jobs:
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/chromewebstore
       - name: Upload the new package to the Chrome Web Store
         env:
           TOKEN: ${{ steps.auth.outputs.access_token }}
