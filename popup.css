@@ -54,7 +54,7 @@ button.danger:hover { border-color: #e05a5a; color: #e05a5a; }
 .row.actions { margin-bottom: 0; }
 label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 label.grow { flex: 1; min-width: 0; }
-.hint { color: var(--muted); font-weight: normal; }
+.hint { color: var(--muted); font-size: 11px; margin: -4px 0 8px; }
 
 input, select {
   background: var(--bg);

@@ -25,7 +25,7 @@ The listing is not published yet. This section will link to it after the first r
 5. Enter the header or cookie name and the value.
 6. Click Save.
 
-The switch on a rule enables or disables the rule. Header rules apply to new requests at once. Cookie rules apply on the next navigation to a page that matches.
+The switch on a rule enables or disables the rule. Header rules apply to new requests at once. Cookie rules apply on the next navigation to a page that matches. The match pattern of a cookie rule decides when CookieJab sets the cookie. The browser then sends the cookie to all paths on that host.
 
 ## Match Pattern Syntax
 
@@ -62,6 +62,7 @@ Both rule types use the same parser in `match-pattern.js`.
 - Header rules set the header. They do not append to an existing header.
 - Cookie rules run on navigation. The cookie can be absent from the first request of that navigation, because the cookie write and the request start at the same time. A reload sends it.
 - Cookie rules set a session cookie without the `Secure`, `HttpOnly`, or `SameSite` attributes.
+- A cookie applies to the whole host, not only to the path of the match pattern. When you disable, delete, or change a cookie rule, CookieJab removes the cookies that the rule set.
 - IPv6 hosts are not supported.
 - The extension asks for access to all sites, because you choose the target sites at run time.
 

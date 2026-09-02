@@ -106,6 +106,26 @@ try {
   check("cj cookie is host-only on localhost with path /", cj && cj.domain === "localhost" && cj.path === "/" && !cj.hostOnly === false, JSON.stringify(cj));
   check("no cookie named secret exists anywhere", !cookies.some((c) => c.name === "secret"), JSON.stringify(cookies.map((c) => c.name)));
 
+  const setRules = async (list) => { await popup.eval(`chrome.storage.local.set({ rules: ${JSON.stringify(list)} })`); await sleep(800); };
+  const cjCookies = () => popup.eval("chrome.cookies.getAll({ name: 'cj' })");
+  const applied = await popup.eval("chrome.storage.local.get('appliedCookies')");
+  const rec = applied.appliedCookies?.c ?? [];
+  check("applied cookie is recorded for rule c", rec.length === 1 && rec[0].url === `http://localhost:${PORT}/` && rec[0].name === "cj", JSON.stringify(applied));
+  await setRules(rules.map((r) => (r.id === "c" ? { ...r, enabled: false } : r)));
+  check("disabling the cookie rule removes cj", (await cjCookies()).length === 0);
+  await setRules(rules);
+  await page.navigate(`http://localhost:${PORT}/cookies`);
+  await sleep(300);
+  check("enabling the cookie rule sets cj again", (await cjCookies()).length === 1);
+  await setRules(rules.filter((r) => r.id !== "c"));
+  check("deleting the cookie rule removes cj", (await cjCookies()).length === 0);
+  await page.navigate(`http://localhost:${PORT}/cookies`);
+  echo = JSON.parse(await page.eval("document.body.innerText"));
+  check("the site no longer receives cj after the delete", !/cj=/.test(echo.headers.cookie || ""), JSON.stringify(echo.headers.cookie));
+  const cleared = await popup.eval("chrome.storage.local.get('appliedCookies')");
+  check("record for rule c is cleared", cleared.appliedCookies?.c === undefined, JSON.stringify(cleared));
+  await setRules(rules);
+
   const trySave = async (url, key, type = "header") => popup.eval(`(async () => {
     const f = document.querySelector('#rule-form'); if (f.hidden) document.querySelector('#add-btn').click();
     document.querySelector('#f-type').value = ${JSON.stringify(type)};
@@ -118,6 +138,16 @@ try {
     const { rules } = await chrome.storage.local.get('rules');
     return { error: err.hidden ? null : err.textContent, count: rules.length, last: rules[rules.length - 1].url };
   })()`);
+
+  const hints = await popup.eval(`(() => {
+    if (document.querySelector('#rule-form').hidden) document.querySelector('#add-btn').click();
+    const type = document.querySelector('#f-type'), hint = document.querySelector('#f-url-hint');
+    type.value = 'cookie'; type.dispatchEvent(new Event('change'));
+    const cookie = hint.textContent;
+    type.value = 'header'; type.dispatchEvent(new Event('change'));
+    return { cookie, header: hint.textContent };
+  })()`);
+  check("hint explains the cookie scope", /whole host/.test(hints.cookie) && !/whole host/.test(hints.header), JSON.stringify(hints));
 
   let r = await trySave("ftp://example.com/*", "X-Test");
   check("save rejects ftp scheme", r.error && r.count === 4, JSON.stringify(r));

@@ -9,6 +9,11 @@ const formErrorEl = $("#form-error");
 const lastErrorEl = $("#last-error");
 
 const TYPES = new Set(["header", "cookie"]);
+const HINTS = {
+  header: "Format: scheme://host/path. * is permitted. CookieJab adds the header to each request that matches.",
+  cookie: "Format: scheme://host/path. * is permitted. When a page that matches opens, CookieJab sets the cookie. " +
+    "The cookie then applies to the whole host, not only to the path."
+};
 // RFC 7230 token. Valid for header names and cookie names.
 const TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 
@@ -74,10 +79,15 @@ function showFormError(message) {
   formErrorEl.hidden = !message;
 }
 
+function showHint() {
+  $("#f-url-hint").textContent = HINTS[$("#f-type").value] ?? HINTS.header;
+}
+
 function showForm(rule) {
   $("#rule-id").value = rule?.id ?? "";
   $("#f-name").value = rule?.name ?? "";
   $("#f-type").value = rule?.type ?? "header";
+  showHint();
   $("#f-url").value = rule?.url ?? "";
   $("#f-key").value = rule?.key ?? "";
   $("#f-value").value = rule?.value ?? "";
@@ -120,6 +130,7 @@ $("#add-btn").addEventListener("click", () => {
 });
 
 $("#cancel-btn").addEventListener("click", hideForm);
+$("#f-type").addEventListener("change", showHint);
 
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();

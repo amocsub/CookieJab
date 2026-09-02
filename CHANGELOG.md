@@ -13,6 +13,8 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 - A switch per rule.
 - Validation of the match pattern and the header or cookie name at save time.
 - An error banner in the popup for rules that CookieJab cannot apply.
+- A hint under the match pattern field that explains the scope of each rule type.
+- Removal of the cookies that a cookie rule set when you disable, delete, or change the rule.
 
 ### Changed
 
