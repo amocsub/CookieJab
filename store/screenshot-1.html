@@ -8,15 +8,14 @@
   body {
     width: 1280px; padding: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px;
-    background: radial-gradient(circle at 30% 20%, #34344a 0%, #1e1e24 60%);
+    background: radial-gradient(circle at 30% 20%, #23251a 0%, #0f100b 60%);
   }
   .caption { text-align: center; }
-  .caption h2 { margin: 0 0 8px; font-size: 34px; font-weight: 600; }
+  .caption h2 { margin: 0 0 8px; font: 600 34px/1.2 var(--mono); color: var(--ink); letter-spacing: -0.5px; }
   .caption p { margin: 0; color: var(--muted); font-size: 18px; }
   .popup {
     width: 420px; padding: 12px; box-sizing: border-box;
-    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
     transform: scale(1.45); transform-origin: top center;
   }
 </style>
@@ -29,35 +28,35 @@
   <div class="popup">
     <header>
       <h1>CookieJab</h1>
-      <button class="primary">+ Add rule</button>
+      <button>Add rule</button>
     </header>
     <ul>
-      <li class="rule">
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      <li class="rule type-header">
+        <label class="rule-toggle"><input type="checkbox" checked></label>
         <div class="rule-body">
-          <div class="rule-top"><span class="tag header">header</span><span class="rule-name">Staging auth</span></div>
+          <div class="rule-top"><span class="rule-code">HDR</span><span class="rule-name">Staging auth</span></div>
           <div class="rule-url">https://*.staging.example.com/*</div>
-          <div class="rule-kv"><span class="k">Authorization</span>: Bearer eyJhbGciOiJSUzI1NiJ9.e30.sig</div>
+          <div class="rule-kv"><span class="k">Authorization</span><span class="v">Bearer eyJhbGciOiJSUzI1NiJ9.e30.sig</span></div>
         </div>
-        <div class="rule-actions"><button class="icon-btn">&#9998;</button><button class="icon-btn danger">&#128465;</button></div>
+        <div class="rule-actions"><button class="text">edit</button><button class="text danger">del</button></div>
       </li>
-      <li class="rule">
-        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+      <li class="rule type-cookie">
+        <label class="rule-toggle"><input type="checkbox" checked></label>
         <div class="rule-body">
-          <div class="rule-top"><span class="tag cookie">cookie</span><span class="rule-name">QA session</span></div>
+          <div class="rule-top"><span class="rule-code">CKI</span><span class="rule-name">QA session</span></div>
           <div class="rule-url">*://qa.example.com/*</div>
-          <div class="rule-kv"><span class="k">session_id</span>: 8f3c1a7e4b2d</div>
+          <div class="rule-kv"><span class="k">session_id</span><span class="v">8f3c1a7e4b2d</span></div>
         </div>
-        <div class="rule-actions"><button class="icon-btn">&#9998;</button><button class="icon-btn danger">&#128465;</button></div>
+        <div class="rule-actions"><button class="text">edit</button><button class="text danger">del</button></div>
       </li>
-      <li class="rule disabled">
-        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+      <li class="rule type-header disabled">
+        <label class="rule-toggle"><input type="checkbox"></label>
         <div class="rule-body">
-          <div class="rule-top"><span class="tag header">header</span><span class="rule-name">Feature flag</span></div>
+          <div class="rule-top"><span class="rule-code">HDR</span><span class="rule-name">Feature flag</span></div>
           <div class="rule-url">*://*.example.com/api/*</div>
-          <div class="rule-kv"><span class="k">X-Feature</span>: new-checkout</div>
+          <div class="rule-kv"><span class="k">X-Feature</span><span class="v">new-checkout</span></div>
         </div>
-        <div class="rule-actions"><button class="icon-btn">&#9998;</button><button class="icon-btn danger">&#128465;</button></div>
+        <div class="rule-actions"><button class="text">edit</button><button class="text danger">del</button></div>
       </li>
     </ul>
   </div>

@@ -10,9 +10,8 @@ const lastErrorEl = $("#last-error");
 
 const TYPES = new Set(["header", "cookie"]);
 const HINTS = {
-  header: "Format: scheme://host/path. * is permitted. CookieJab adds the header to each request that matches.",
-  cookie: "Format: scheme://host/path. * is permitted. When a page that matches opens, CookieJab sets the cookie. " +
-    "The cookie then applies to the whole host, not only to the path."
+  header: "scheme://host/path, * permitted. Adds the header on each match.",
+  cookie: "scheme://host/path, * permitted. Sets the cookie for the whole host."
 };
 // RFC 7230 token. Valid for header names and cookie names.
 const TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
@@ -33,32 +32,35 @@ function el(tag, className, text) {
   return node;
 }
 
+const CODES = { header: "HDR", cookie: "CKI", invalid: "INV" };
+
 function renderRule(r) {
   const type = TYPES.has(r.type) ? r.type : "invalid";
-  const li = el("li", "rule" + (r.enabled ? "" : " disabled"));
+  const li = el("li", `rule type-${type}` + (r.enabled ? "" : " disabled"));
 
-  const toggle = el("label", "switch");
+  const toggle = el("label", "rule-toggle");
   const checkbox = el("input");
   checkbox.type = "checkbox";
   checkbox.checked = Boolean(r.enabled);
   checkbox.dataset.toggle = r.id;
-  toggle.append(checkbox, el("span", "slider"));
+  checkbox.setAttribute("aria-label", `${r.enabled ? "Disable" : "Enable"} ${r.name || r.key}`);
+  toggle.append(checkbox);
 
   const body = el("div", "rule-body");
   const top = el("div", "rule-top");
-  top.append(el("span", "tag " + type, type), el("span", "rule-name", r.name || "(unnamed)"));
+  top.append(el("span", "rule-code", CODES[type]), el("span", "rule-name", r.name || "(unnamed)"));
   const url = el("div", "rule-url", r.url);
   url.title = r.url;
   const kv = el("div", "rule-kv");
-  kv.append(el("span", "k", r.key), `: ${r.value ?? ""}`);
+  kv.append(el("span", "k", r.key), el("span", "v", r.value ?? ""));
   body.append(top, url, kv);
 
   const actions = el("div", "rule-actions");
-  const edit = el("button", "icon-btn", "✎");
-  edit.title = "Edit";
+  const edit = el("button", "text", "edit");
+  edit.type = "button";
   edit.dataset.edit = r.id;
-  const del = el("button", "icon-btn danger", "\u{1F5D1}");
-  del.title = "Delete";
+  const del = el("button", "text danger", "del");
+  del.type = "button";
   del.dataset.del = r.id;
   actions.append(edit, del);
 
@@ -79,6 +81,16 @@ function showFormError(message) {
   formErrorEl.hidden = !message;
 }
 
+function setType(type) {
+  $("#f-type").value = type;
+  for (const b of document.querySelectorAll("#rule-form .seg button")) {
+    b.setAttribute("aria-pressed", String(b.dataset.type === type));
+  }
+  $("#save-btn").classList.toggle("type-header", type === "header");
+  $("#save-btn").classList.toggle("type-cookie", type === "cookie");
+  showHint();
+}
+
 function showHint() {
   $("#f-url-hint").textContent = HINTS[$("#f-type").value] ?? HINTS.header;
 }
@@ -86,8 +98,7 @@ function showHint() {
 function showForm(rule) {
   $("#rule-id").value = rule?.id ?? "";
   $("#f-name").value = rule?.name ?? "";
-  $("#f-type").value = rule?.type ?? "header";
-  showHint();
+  setType(rule?.type ?? "header");
   $("#f-url").value = rule?.url ?? "";
   $("#f-key").value = rule?.key ?? "";
   $("#f-value").value = rule?.value ?? "";
@@ -131,6 +142,10 @@ $("#add-btn").addEventListener("click", () => {
 
 $("#cancel-btn").addEventListener("click", hideForm);
 $("#f-type").addEventListener("change", showHint);
+
+for (const b of document.querySelectorAll("#rule-form .seg button")) {
+  b.addEventListener("click", () => setType(b.dataset.type));
+}
 
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();

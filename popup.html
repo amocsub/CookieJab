@@ -8,7 +8,7 @@
 <body>
   <header>
     <h1>CookieJab</h1>
-    <button id="add-btn" class="primary">+ Add rule</button>
+    <button id="add-btn">Add rule</button>
   </header>
 
   <p id="last-error" class="banner error" hidden></p>
@@ -20,29 +20,30 @@
         <input id="f-name" placeholder="Staging auth token" />
       </label>
       <label>Type
-        <select id="f-type">
-          <option value="header">Header</option>
-          <option value="cookie">Cookie</option>
-        </select>
+        <input type="hidden" id="f-type" value="header" />
+        <div class="seg" role="group" aria-label="Rule type">
+          <button type="button" class="type-header" data-type="header" aria-pressed="true">Header</button>
+          <button type="button" class="type-cookie" data-type="cookie" aria-pressed="false">Cookie</button>
+        </div>
       </label>
     </div>
     <div class="row">
       <label class="grow">Match pattern
-        <input id="f-url" placeholder="*://*.example.com/*" />
+        <input id="f-url" class="mono" placeholder="*://*.example.com/*" />
       </label>
     </div>
     <p id="f-url-hint" class="hint"></p>
     <div class="row">
       <label class="grow">Key
-        <input id="f-key" placeholder="Authorization / session_id" />
+        <input id="f-key" class="mono" placeholder="Authorization / session_id" />
       </label>
       <label class="grow">Value
-        <input id="f-value" placeholder="Bearer ... / abc123" />
+        <input id="f-value" class="mono" placeholder="Bearer ... / abc123" />
       </label>
     </div>
     <p id="form-error" class="error" hidden></p>
     <div class="row actions">
-      <button type="submit" class="primary" id="save-btn">Save</button>
+      <button type="submit" class="primary type-header" id="save-btn">Save</button>
       <button type="button" id="cancel-btn">Cancel</button>
     </div>
   </form>
