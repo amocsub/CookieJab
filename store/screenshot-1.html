@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../popup.css">
+<style>
+  html, body { margin: 0; width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    width: 1280px; padding: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 36px;
+    background: radial-gradient(circle at 30% 20%, #34344a 0%, #1e1e24 60%);
+  }
+  .caption { text-align: center; }
+  .caption h2 { margin: 0 0 8px; font-size: 34px; font-weight: 600; }
+  .caption p { margin: 0; color: var(--muted); font-size: 18px; }
+  .popup {
+    width: 420px; padding: 12px; box-sizing: border-box;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    transform: scale(1.45); transform-origin: top center;
+  }
+</style>
+</head>
+<body>
+  <div class="caption">
+    <h2>Rules with a URL match pattern and a toggle</h2>
+    <p>Header rules run on every request. Cookie rules run when you open a matching page.</p>
+  </div>
+  <div class="popup">
+    <header>
+      <h1>CookieJab</h1>
+      <button class="primary">+ Add rule</button>
+    </header>
+    <ul>
+      <li class="rule">
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <div class="rule-body">
+          <div class="rule-top"><span class="tag header">header</span><span class="rule-name">Staging auth</span></div>
+          <div class="rule-url">https://*.staging.example.com/*</div>
+          <div class="rule-kv"><span class="k">Authorization</span>: Bearer eyJhbGciOiJSUzI1NiJ9.e30.sig</div>
+        </div>
+        <div class="rule-actions"><button class="icon-btn">&#9998;</button><button class="icon-btn danger">&#128465;</button></div>
+      </li>
+      <li class="rule">
+        <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+        <div class="rule-body">
+          <div class="rule-top"><span class="tag cookie">cookie</span><span class="rule-name">QA session</span></div>
+          <div class="rule-url">*://qa.example.com/*</div>
+          <div class="rule-kv"><span class="k">session_id</span>: 8f3c1a7e4b2d</div>
+        </div>
+        <div class="rule-actions"><button class="icon-btn">&#9998;</button><button class="icon-btn danger">&#128465;</button></div>
+      </li>
+      <li class="rule disabled">
+        <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+        <div class="rule-body">
+          <div class="rule-top"><span class="tag header">header</span><span class="rule-name">Feature flag</span></div>
+          <div class="rule-url">*://*.example.com/api/*</div>
+          <div class="rule-kv"><span class="k">X-Feature</span>: new-checkout</div>
+        </div>
+        <div class="rule-actions"><button class="icon-btn">&#9998;</button><button class="icon-btn danger">&#128465;</button></div>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>

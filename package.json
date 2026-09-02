@@ -1,0 +1,14 @@
+{
+  "name": "cookiejab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome extension that injects request headers and cookies per URL match pattern.",
+  "license": "MIT",
+  "repository": "github:amocsub/CookieJab",
+  "scripts": {
+    "check": "node --check background.js && node --check popup.js && node --check match-pattern.js && node -e \"JSON.parse(require('fs').readFileSync('manifest.json','utf8'))\"",
+    "test": "node --test",
+    "build": "scripts/build.sh"
+  }
+}

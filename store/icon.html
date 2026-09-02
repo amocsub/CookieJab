@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html, body { margin: 0; background: transparent; } canvas { display: block; }</style>
+</head>
+<body>
+<img id="src" src="icon-source-128.png" alt="">
+<canvas id="out" width="128" height="128"></canvas>
+<script>
+  // The store wants 96x96 artwork inside a 128x128 canvas.
+  // The source artwork occupies the box below inside its own 128x128 canvas.
+  const BOX = { left: 6, top: 6, right: 123, bottom: 124 };
+  window.addEventListener("load", () => {
+    const img = document.getElementById("src");
+    const canvas = document.getElementById("out");
+    const ctx = canvas.getContext("2d");
+    const artW = BOX.right - BOX.left + 1;
+    const artH = BOX.bottom - BOX.top + 1;
+    const scale = 96 / Math.max(artW, artH);
+    const size = img.naturalWidth * scale;
+    const cx = (BOX.left + BOX.right + 1) / 2;
+    const cy = (BOX.top + BOX.bottom + 1) / 2;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 64 - cx * scale, 64 - cy * scale, size, size);
+    img.remove();
+  });
+</script>
+</body>
+</html>

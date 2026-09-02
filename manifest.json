@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "CookieJab",
+  "version": "1.0.0",
+  "description": "Inject request headers and cookies per URL match pattern. Each rule can be toggled on and off.",
+  "homepage_url": "https://github.com/amocsub/CookieJab",
+  "minimum_chrome_version": "101",
+  "permissions": [
+    "declarativeNetRequestWithHostAccess",
+    "cookies",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "CookieJab",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+}

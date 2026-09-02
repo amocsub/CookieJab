@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CookieJab</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <h1>CookieJab</h1>
+    <button id="add-btn" class="primary">+ Add rule</button>
+  </header>
+
+  <p id="last-error" class="banner error" hidden></p>
+
+  <form id="rule-form" hidden>
+    <input type="hidden" id="rule-id" />
+    <div class="row">
+      <label class="grow">Name
+        <input id="f-name" placeholder="e.g. Staging auth token" />
+      </label>
+      <label>Type
+        <select id="f-type">
+          <option value="header">Header</option>
+          <option value="cookie">Cookie</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <label class="grow">URL match pattern <span class="hint">scheme://host/path, <code>*</code> allowed</span>
+        <input id="f-url" placeholder="*://*.example.com/*" />
+      </label>
+    </div>
+    <div class="row">
+      <label class="grow">Key
+        <input id="f-key" placeholder="Authorization / session_id" />
+      </label>
+      <label class="grow">Value
+        <input id="f-value" placeholder="Bearer ... / abc123" />
+      </label>
+    </div>
+    <p id="form-error" class="error" hidden></p>
+    <div class="row actions">
+      <button type="submit" class="primary" id="save-btn">Save</button>
+      <button type="button" id="cancel-btn">Cancel</button>
+    </div>
+  </form>
+
+  <ul id="rule-list"></ul>
+  <p id="empty" class="empty" hidden>No rules yet. Add one to start injecting.</p>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
