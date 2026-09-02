@@ -15,5 +15,4 @@ render() {
 
 mkdir -p assets
 render promo-tile.html 440 280 assets/promo-tile-440x280.png
-render screenshot-1.html 1280 800 assets/screenshot-1-1280x800.png
 render icon.html 128 128 ../icons/icon128.png 00000000

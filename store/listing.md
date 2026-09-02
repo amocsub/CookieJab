@@ -38,7 +38,7 @@ English
 ### Images
 
 - Store icon: `icons/icon128.png`
-- Screenshot: `store/assets/screenshot-1-1280x800.png`
+- Screenshots, up to five, 1280x800: `store/assets/1-bundles-1280x800.png`, `2-add-rule-1280x800.png`, `3-curl-import-1280x800.png`, `4-bundle-override-1280x800.png`
 - Small promo tile: `store/assets/promo-tile-440x280.png`
 
 ### Additional Fields

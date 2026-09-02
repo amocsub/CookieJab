@@ -103,7 +103,7 @@ npx @puppeteer/browsers install chrome@stable
 CHROME="<path from the install command>" node scripts/e2e.mjs
 ```
 
-`store/` holds the Chrome Web Store listing text and the sources of the store images. `store/render.sh` renders the images and the 128 px icon with headless Chrome.
+`store/` holds the Chrome Web Store listing text and the sources of the store images. `store/render.sh` renders the promo tile and the 128 px icon with headless Chrome. `scripts/capture-screenshots.mjs` builds the screenshots from the real popup with a caption, using the same Chrome for Testing setup as the browser test.
 
 ## Release
 
