@@ -31,9 +31,9 @@ rm -rf "$stage" "$out"
 mkdir -p "$stage/icons"
 for f in "${files[@]}"; do
   cp "$f" "$stage/$f"
-  touch -t "$stamp" "$stage/$f"
+  TZ=UTC touch -t "$stamp" "$stage/$f"
 done
-touch -t "$stamp" "$stage" "$stage/icons"
+TZ=UTC touch -t "$stamp" "$stage" "$stage/icons"
 
 (cd "$stage" && TZ=UTC zip -X -D -q "../../$out" "${files[@]}")
 rm -rf "$stage"
