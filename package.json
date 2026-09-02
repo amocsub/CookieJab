@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Chrome extension that injects request headers and cookies per URL match pattern.",
+  "description": "Chrome extension that injects request headers and cookies per match pattern.",
   "license": "MIT",
   "repository": "github:amocsub/CookieJab",
   "scripts": {

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseMatchPattern, matchesUrl, toDnrCondition } from "../match-pattern.js";
 
-// Mirror how the service worker would evaluate a regexFilter against a URL.
+// Compare a URL with the regexFilter as the browser does.
 function dnrMatches(pattern, url) {
   const { regexFilter } = toDnrCondition(parseMatchPattern(pattern));
   return new RegExp(regexFilter).test(url);

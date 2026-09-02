@@ -1,6 +1,6 @@
 // Match pattern parsing shared by the popup and the service worker.
-// The grammar follows Chrome extension match patterns: <scheme>://<host>[:port]/<path>.
-// The path part is matched against the URL path plus query string, as Chrome does.
+// The grammar follows Chrome match patterns: <scheme>://<host>[:port]/<path>.
+// The path part is compared with the URL path plus the query string, as in Chrome.
 
 const SCHEMES = new Set(["*", "http", "https"]);
 
@@ -15,19 +15,15 @@ function escapeRegex(s) {
   return s.replace(RE2_META, "\\$&");
 }
 
-// Turn a glob where `*` matches any run of characters into a regex fragment.
 function globToRegex(glob) {
   return glob.split("*").map(escapeRegex).join(".*");
 }
 
-/**
- * Parse a match pattern into its parts.
- * Accepts `<all_urls>`, a full pattern, or a bare host with an optional path.
- * Throws an Error with a message suitable for the UI when the pattern is invalid.
- */
+// Accepts `<all_urls>`, a full pattern, or a bare host with an optional path.
+// If the pattern is invalid, throws an Error with a message for the form.
 export function parseMatchPattern(input) {
   let s = String(input ?? "").trim();
-  if (!s) throw new Error("URL pattern is required.");
+  if (!s) throw new Error("Match pattern is required.");
   if (s === "<all_urls>") s = "*://*/*";
   if (!s.includes("://")) s = "*://" + s;
 
@@ -64,7 +60,7 @@ export function parseMatchPattern(input) {
       host = host.slice(2);
     }
     if (host.includes("*")) {
-      throw new Error("In the host, * is only allowed as the first label, for example *.example.com.");
+      throw new Error("In the host, * is permitted only as the first label, for example *.example.com.");
     }
     if (!host) throw new Error("Host is required.");
     let u;
@@ -83,7 +79,6 @@ export function parseMatchPattern(input) {
   return { scheme, host, port, path, canonical };
 }
 
-/** Return true when `url` matches the parsed pattern. */
 export function matchesUrl(pattern, url) {
   let u;
   try {
@@ -116,7 +111,6 @@ export function matchesUrl(pattern, url) {
   return rx.test(u.pathname + u.search);
 }
 
-/** Build a declarativeNetRequest rule condition equivalent to the parsed pattern. */
 export function toDnrCondition(pattern) {
   const scheme = pattern.scheme === "*" ? "https?" : pattern.scheme;
 
@@ -133,7 +127,7 @@ export function toDnrCondition(pattern) {
   if (!pattern.port) {
     port = "(?::\\d+)?";
   } else if (pattern.port === "80" || pattern.port === "443") {
-    // Chrome drops default ports from canonical URLs.
+    // Chrome removes default ports from canonical URLs.
     port = "(?::" + pattern.port + ")?";
   } else {
     port = ":" + pattern.port;

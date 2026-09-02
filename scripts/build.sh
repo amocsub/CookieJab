@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Chrome Web Store zip from an explicit list of files.
-# The zip is reproducible for a given commit: file times are set to the commit time.
+# The file times are the commit time, so the zip is the same for a given commit.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

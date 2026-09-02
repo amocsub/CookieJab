@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-      - name: Check that the tag matches the manifest version
+      - name: Make sure that the tag matches the manifest version
         run: |
           version=$(node -p "require('./manifest.json').version")
           if [ "$GITHUB_REF_NAME" != "v$version" ]; then

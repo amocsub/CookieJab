@@ -1,9 +1,6 @@
-// CookieJab service worker.
 // Rules live in chrome.storage.local under "rules" as an array of:
 //   { id, enabled, type: "header"|"cookie", name, url, key, value }
-// Header rules become declarativeNetRequest dynamic rules.
-// Cookie rules call chrome.cookies.set on top level navigation.
-// The last sync or cookie error is stored under "lastError" for the popup.
+// The popup shows the value of "lastError" in chrome.storage.local.
 
 import { parseMatchPattern, matchesUrl, toDnrCondition } from "./match-pattern.js";
 
@@ -23,7 +20,7 @@ function label(rule) {
   return rule.name || rule.key || rule.id;
 }
 
-/** Build dynamic rules from enabled header rules. Collect pattern errors for every rule. */
+// Pattern errors are collected for all rules, not only for header rules.
 function toDnrRules(rules) {
   const dnr = [];
   const errors = [];
@@ -67,14 +64,13 @@ async function doSyncDnr() {
   }
 }
 
-// Serialize syncs so two storage events never overlap updateDynamicRules.
+// Two storage events must not overlap in updateDynamicRules.
 let syncChain = Promise.resolve();
 function syncDnr() {
   syncChain = syncChain.then(doSyncDnr, doSyncDnr);
   return syncChain;
 }
 
-/** Set cookies for every enabled cookie rule that matches `url`. */
 async function applyCookies(url) {
   let u;
   try {

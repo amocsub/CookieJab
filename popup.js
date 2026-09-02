@@ -93,7 +93,7 @@ function hideForm() {
   formEl.hidden = true;
 }
 
-/** Validate a rule. Return { pattern } on success or { error } on failure. */
+// Returns { pattern } for a valid rule, or { error } with a message for the form.
 async function validate(rule) {
   let pattern;
   try {
@@ -183,7 +183,7 @@ listEl.addEventListener("change", async (e) => {
   }
 });
 
-// The service worker updates lastError after every sync. Keep the banner current.
+// The service worker writes lastError after each sync.
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && changes.lastError) render();
 });

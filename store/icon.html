@@ -8,8 +8,8 @@
 <img id="src" src="icon-source-128.png" alt="">
 <canvas id="out" width="128" height="128"></canvas>
 <script>
-  // The store wants 96x96 artwork inside a 128x128 canvas.
-  // The source artwork occupies the box below inside its own 128x128 canvas.
+  // The store requires 96x96 artwork inside a 128x128 canvas.
+  // BOX is the area that the source artwork occupies in its own 128x128 canvas.
   const BOX = { left: 6, top: 6, right: 123, bottom: 124 };
   window.addEventListener("load", () => {
     const img = document.getElementById("src");

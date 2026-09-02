@@ -1,8 +1,8 @@
-// Browser test. Loads the extension in a headless Chrome, injects rules, and checks
-// header and cookie behavior against a local echo server.
-// Google Chrome branded builds ignore --load-extension since version 137.
-// Use Chrome for Testing: npx @puppeteer/browsers install chrome@stable
-// Run: CHROME="<path to Chrome for Testing binary>" node scripts/e2e.mjs
+// Browser test. Loads the extension in headless Chrome, writes rules, and makes sure that
+// header and cookie injection work against a local echo server.
+// Google Chrome ignores --load-extension since version 137. Use Chrome for Testing:
+//   npx @puppeteer/browsers install chrome@stable
+//   CHROME="<path from the install command>" node scripts/e2e.mjs
 import { spawn } from "node:child_process";
 import http from "node:http";
 import crypto from "node:crypto";

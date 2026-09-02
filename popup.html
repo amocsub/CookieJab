@@ -17,7 +17,7 @@
     <input type="hidden" id="rule-id" />
     <div class="row">
       <label class="grow">Name
-        <input id="f-name" placeholder="e.g. Staging auth token" />
+        <input id="f-name" placeholder="Staging auth token" />
       </label>
       <label>Type
         <select id="f-type">
@@ -27,7 +27,7 @@
       </label>
     </div>
     <div class="row">
-      <label class="grow">URL match pattern <span class="hint">scheme://host/path, <code>*</code> allowed</span>
+      <label class="grow">Match pattern <span class="hint">scheme://host/path, <code>*</code> permitted</span>
         <input id="f-url" placeholder="*://*.example.com/*" />
       </label>
     </div>
@@ -47,7 +47,7 @@
   </form>
 
   <ul id="rule-list"></ul>
-  <p id="empty" class="empty" hidden>No rules yet. Add one to start injecting.</p>
+  <p id="empty" class="empty" hidden>No rules yet. Click Add rule to create one.</p>
 
   <script type="module" src="popup.js"></script>
 </body>
