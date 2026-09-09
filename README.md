@@ -39,6 +39,10 @@ Click edit on a bundle to rename it or to set a match pattern for the whole bund
 
 Click the arrow next to Add rule, paste a curl command, and click Continue. CookieJab reads the command for its web address, its headers, and its cookies, including a Cookie header, and shows every one of them with a switch, a name, and a value that you can edit before you import. Every entry starts unswitched, so nothing imports unless you choose it. A switched entry moves to the top of the list, and an unswitched one dims, so what you are about to import stays easy to see in a long list. The filter field narrows the list to names that contain the text you type, without dropping anything you already switched. Import stays disabled until at least one entry is switched on. Switch on the entries that you want, edit a name or a value if you need to, adjust the match pattern if needed, choose an existing bundle or type a name for a new one, then click Import.
 
+### Smart Import
+
+Text that is not a curl command, for example a raw HTTP request copied from a proxy or a browser, has no fixed syntax for CookieJab to parse. On a Chrome build where the on-device Prompt API is available, a Smart Import button appears next to Continue. It sends the pasted text to a local language model, already built into Chrome, that runs entirely on your device. The model's first use may download a one-time model component; after that, nothing about a Smart Import leaves the device. Its result goes through the same review screen as a curl import, so nothing is added until you switch on and confirm each entry. The button does not appear on a Chrome build where the API is unavailable.
+
 ## Match Pattern Syntax
 
 A match pattern has the form `<scheme>://<host>[:port]/<path>`.
@@ -46,7 +50,7 @@ A match pattern has the form `<scheme>://<host>[:port]/<path>`.
 | Part | Permitted values |
 | --- | --- |
 | Scheme | `*` for http or https, `http`, or `https` |
-| Host | A host name, `*.host` for the host and all its subdomains, or `*` for all hosts |
+| Host | A host name, `*.host` for the host and all its subdomains, `*` for all hosts, or a bracketed IPv6 literal such as `[::1]` |
 | Port | Optional. Without a port, the pattern matches all ports |
 | Path | Starts with `/`. `*` matches any run of characters. The path is compared with the URL path and query string |
 
@@ -71,16 +75,17 @@ Both rule types use the same parser in `match-pattern.js`.
 
 ## Limitations
 
-- Header rules set the header. They do not append to an existing header.
+- A header rule replaces the header by default. Its append mode adds another instance instead of replacing it.
 - Cookie rules run on navigation. The cookie can be absent from the first request of that navigation, because the cookie write and the request start at the same time. A reload sends it.
-- Cookie rules set a session cookie without the `Secure`, `HttpOnly`, or `SameSite` attributes.
+- A cookie rule can set `SameSite`, `Secure`, and an expiry. `HttpOnly` is not configurable.
 - A cookie applies to the whole host, not only to the path of the match pattern. When you disable, delete, or change a cookie rule, CookieJab removes the cookies that the rule set.
-- IPv6 hosts are not supported.
+- A header rule's `{{random}}`, `{{timestamp}}`, and `{{uuid}}` placeholders re-roll on a fixed interval, not on every single request, because a `declarativeNetRequest` rule value is otherwise fixed until the rule is rebuilt. A cookie rule's placeholders re-roll on every navigation.
+- "Only if absent" mode is available for cookie rules only. Chrome's request-header rule engine has no way to check whether a header is already present before deciding to act.
 - The extension asks for access to all sites, because you choose the target sites at run time.
 
 ## Privacy
 
-Rules stay in `chrome.storage.local` on your device. The extension sends the configured values only to the sites that match your rules. It has no analytics and no remote code. See [PRIVACY.md](PRIVACY.md).
+Rules sync across your devices through `chrome.storage.sync` where possible, falling back to `chrome.storage.local` on that device when a rule set does not fit or sync is unavailable. The extension sends the configured values only to the sites that match your rules, and to Google's sync infrastructure for the sync itself. It has no analytics and no remote code. See [PRIVACY.md](PRIVACY.md).
 
 ## Security
 

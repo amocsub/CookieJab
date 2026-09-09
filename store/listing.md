@@ -24,7 +24,8 @@ Features:
 - Match patterns with scheme, host, and path, for example *://*.example.com/*.
 - Header rules use declarativeNetRequest and run on all request types.
 - Cookie rules set a cookie for the whole site on navigation.
-- All rules stay on your device. CookieJab sends nothing to another destination.
+- Rules sync across your devices through your Chrome sign-in, with an on-device fallback when a rule set does not fit. CookieJab sends rule values only to the sites that match your rules, and to Google's sync infrastructure for the sync itself.
+- Smart Import, on a Chrome build with the on-device Prompt API: extracts headers and cookies from pasted text that is not a curl command, using a language model that runs locally on your device. No new permission, and nothing is sent off-device.
 - Open source under the MIT license: https://github.com/amocsub/CookieJab.
 
 ### Category
@@ -54,10 +55,12 @@ CookieJab injects user defined request headers and cookies into requests that ma
 
 ### Permission Justifications
 
-- `declarativeNetRequestWithHostAccess`: Adds or replaces request headers on requests that match the match patterns of the user. This is the core function of the extension.
+- `declarativeNetRequestWithHostAccess`: Adds, replaces, or appends request and response headers on requests that match the match patterns of the user. This is the core function of the extension.
 - `cookies`: Sets cookies on sites that match the match patterns of the user. This is the core function of the extension.
-- `storage`: Stores the rules of the user on the device.
+- `storage`: Stores the rules of the user, synced through `chrome.storage.sync` where possible, and device-local operational data such as match counters.
 - `webNavigation`: Finds top level navigations. When the user opens a site that matches, cookie rules apply.
+- `webRequest`: Reads the URL and resource type of outgoing requests, read only, to count how many times each header rule matches. The extension does not read or forward header content through this permission.
+- `alarms`: Wakes the extension on a fixed interval so a header rule value that uses a `{{random}}`, `{{timestamp}}`, or `{{uuid}}` placeholder gets a fresh value periodically, since a `declarativeNetRequest` rule value is otherwise fixed until the rule is rebuilt.
 - Host permissions `<all_urls>`: The user chooses the target sites at run time with match patterns. Header modification and cookie writes require host permission for those sites. The extension cannot know the sites in advance.
 
 ### Remote Code

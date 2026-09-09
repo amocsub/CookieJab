@@ -16,13 +16,24 @@
           <line class="eye-slash" x1="2" y1="2" x2="22" y2="22"/>
         </svg>
       </button>
+      <button id="kill-switch-btn" type="button" class="icon-only" aria-pressed="false" title="Pause all rules">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v10" />
+          <path d="M6.3 6.3a9 9 0 1 0 11.4 0" />
+        </svg>
+      </button>
       <div class="split-btn">
         <button id="add-btn">Add rule</button>
-        <button id="import-btn" type="button" title="More ways to add a rule: import from a curl command">
+        <button id="import-btn" type="button" aria-haspopup="menu" aria-expanded="false" title="More ways to add a rule">
           <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 9l6 6 6-6"/>
           </svg>
         </button>
+        <div id="import-menu" class="menu" role="menu" hidden>
+          <button type="button" role="menuitem" id="import-curl-btn">Import from curl</button>
+          <button type="button" role="menuitem" id="import-smart-menu-btn" hidden>Smart import</button>
+          <button type="button" role="menuitem" id="import-json-btn">Import / export JSON</button>
+        </div>
       </div>
     </div>
   </header>
@@ -37,7 +48,7 @@
       </label>
       <label>Type
         <input type="hidden" id="f-type" value="header" />
-        <div class="seg" role="group" aria-label="Rule type">
+        <div class="seg" id="f-type-seg" role="group" aria-label="Rule type">
           <button type="button" class="type-header" data-type="header" aria-pressed="true">Header</button>
           <button type="button" class="type-cookie" data-type="cookie" aria-pressed="false">Cookie</button>
         </div>
@@ -58,6 +69,50 @@
         <input id="f-value" class="mono" placeholder="Bearer ... / abc123" />
       </label>
     </div>
+    <p class="hint">Value may use {{random}}, {{timestamp}}, {{uuid}}, or a bundle variable.</p>
+    <div class="row">
+      <div class="grow">
+        <p class="field-label">Mode</p>
+        <div id="f-mode" class="seg" role="group" aria-label="Mode"></div>
+      </div>
+      <div class="grow header-only">
+        <p class="field-label">Side</p>
+        <div id="f-side" class="seg" role="group" aria-label="Side">
+          <button type="button" data-value="request" aria-pressed="true" title="Request header">Request</button>
+          <button type="button" data-value="response" aria-pressed="false" title="Response header">Response</button>
+        </div>
+      </div>
+    </div>
+    <div class="row header-only">
+      <div class="grow">
+        <p class="field-label">Resource types</p>
+        <div id="f-resource-types" class="resource-types" role="group" aria-label="Resource types"></div>
+      </div>
+    </div>
+    <p class="hint header-only">Leave nothing checked to match every resource type.</p>
+    <details class="cookie-only" id="f-cookie-attrs">
+      <summary>Cookie attributes</summary>
+      <div class="row">
+        <div class="grow">
+          <p class="field-label">SameSite</p>
+          <div id="f-samesite" class="seg" role="group" aria-label="SameSite">
+            <button type="button" data-value="" aria-pressed="true">Default</button>
+            <button type="button" data-value="lax" aria-pressed="false">Lax</button>
+            <button type="button" data-value="strict" aria-pressed="false">Strict</button>
+            <button type="button" data-value="no_restriction" aria-pressed="false">None</button>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="grow">
+          <p class="field-label">Secure</p>
+          <label class="checkbox-row"><input type="checkbox" id="f-secure" /> Send only over HTTPS</label>
+        </div>
+        <label class="grow">Expires after (seconds)
+          <input type="number" id="f-expires" min="1" placeholder="Session" />
+        </label>
+      </div>
+    </details>
     <p id="form-error" class="error" hidden></p>
     <div class="row actions">
       <button type="submit" class="primary type-header" id="save-btn">Save</button>
@@ -78,6 +133,17 @@
       </label>
     </div>
     <p class="hint">Optional. Replaces the match pattern of every rule in this bundle.</p>
+    <div class="row">
+      <label class="grow">Variable name (optional)
+        <input id="b-var-name" class="mono" placeholder="identity" />
+      </label>
+    </div>
+    <div class="row">
+      <label class="grow">Choices, one per line as label=value
+        <textarea id="b-var-choices" class="mono" rows="3" placeholder="userA=Bearer aaa&#10;userB=Bearer bbb"></textarea>
+      </label>
+    </div>
+    <p class="hint">Optional. Rules in this bundle can use {{name}} in their value. Click the bundle's pill to switch choices.</p>
     <p id="bundle-form-error" class="error" hidden></p>
     <div class="row actions">
       <button type="submit" class="primary" id="bundle-save-btn">Save</button>
@@ -86,12 +152,14 @@
   </form>
 
   <div id="import-paste" hidden>
-    <p class="hint">Paste a curl command. CookieJab finds its headers and cookies.</p>
+    <p id="import-paste-curl-hint" class="hint">Paste a curl command. CookieJab finds its headers and cookies.</p>
+    <p id="import-paste-smart-hint" class="hint wrap" hidden>Paste any HTTP request, curl command, or similar. On-device AI, already built into Chrome, extracts its headers and cookies. Nothing leaves your device.</p>
     <textarea id="import-text" class="mono" rows="6" placeholder="curl 'https://example.com/api' -H 'Authorization: Bearer ...'"></textarea>
     <p id="import-paste-error" class="error" hidden></p>
     <div class="row actions">
       <button type="button" id="import-paste-btn">Paste</button>
       <button type="button" class="primary" id="import-parse-btn">Continue</button>
+      <button type="button" class="primary" id="import-smart-btn" hidden>Smart import</button>
       <button type="button" id="import-paste-cancel-btn">Cancel</button>
     </div>
   </div>
@@ -119,6 +187,26 @@
     <div class="row actions">
       <button type="button" id="import-back-btn">Back</button>
       <button type="button" class="primary" id="import-confirm-btn" disabled>Import</button>
+    </div>
+  </div>
+
+  <div id="import-json" hidden>
+    <p class="hint">Export copies every rule as JSON, including values. Import replaces or merges a pasted rule list.</p>
+    <label class="grow">Export
+      <textarea id="json-export-text" class="mono" rows="5" readonly></textarea>
+    </label>
+    <div class="row actions">
+      <button type="button" id="json-export-copy-btn">Copy</button>
+      <button type="button" id="json-export-download-btn">Download</button>
+    </div>
+    <label class="grow">Import
+      <textarea id="json-import-text" class="mono" rows="5" placeholder="Paste exported JSON here"></textarea>
+    </label>
+    <p id="json-import-error" class="error" hidden></p>
+    <label class="checkbox-row"><input type="checkbox" id="json-import-replace" /> Replace all existing rules</label>
+    <div class="row actions">
+      <button type="button" id="json-import-cancel-btn">Cancel</button>
+      <button type="button" class="primary" id="json-import-btn">Import</button>
     </div>
   </div>
 

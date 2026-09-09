@@ -11,6 +11,10 @@ files=(
   background.js
   match-pattern.js
   curl-import.js
+  json-import.js
+  templates.js
+  rules-store.js
+  smart-import.js
   popup.css
   popup.html
   popup.js
