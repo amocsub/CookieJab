@@ -39,7 +39,8 @@ test("rejects invalid patterns", () => {
   const bad = [
     "", "ftp://example.com/*", "*://foo.*.bar/*", "*://*foo.com/*", "*://exa mple.com/*",
     "*://user@example.com/*", "*://example.com:99999/*", "*://example.com:abc/*",
-    "*://[::1]/*", "*://example.com?x/*", "*://example.com#x/*", "://example.com/*"
+    "*://example.com?x/*", "*://example.com#x/*", "://example.com/*",
+    "*://[::1/*", "*://[gggg::1]/*", "*://*.[::1]/*", "*://[::1]:abc/*", "*://[::1]:99999/*"
   ];
   for (const b of bad) assert.throws(() => parseMatchPattern(b), `expected throw for ${JSON.stringify(b)}`);
 });
@@ -127,4 +128,24 @@ test("dnr condition shape", () => {
 
 test("matchesUrl returns false for unparsable urls", () => {
   assert.equal(matchesUrl(parseMatchPattern("*://*/*"), "not a url"), false);
+});
+
+test("IPv6 hosts are accepted as exact literals", () => {
+  const p = parseMatchPattern("*://[::1]/*");
+  assert.equal(p.host, "[::1]");
+  assert.equal(p.canonical, "*://[::1]/*");
+  assert.equal(both("*://[::1]/*", "http://[::1]/x"), true);
+  assert.equal(both("*://[::1]/*", "http://[::2]/x"), false);
+});
+
+test("IPv6 hosts accept a port", () => {
+  const p = parseMatchPattern("*://[::1]:8080/*");
+  assert.equal(p.port, "8080");
+  assert.equal(both("*://[::1]:8080/*", "http://[::1]:8080/x"), true);
+  assert.equal(both("*://[::1]:8080/*", "http://[::1]:9090/x"), false);
+});
+
+test("IPv6 hosts do not get a requestDomains condition", () => {
+  const c = toDnrCondition(parseMatchPattern("*://[::1]/*"));
+  assert.equal(c.requestDomains, undefined);
 });

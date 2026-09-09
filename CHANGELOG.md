@@ -4,6 +4,30 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-09
+
+### Added
+
+- Rules sync across devices through `chrome.storage.sync`, with an automatic fallback to `chrome.storage.local` when a rule set does not fit or sync is unavailable.
+- IPv6 host literals, for example `*://[::1]/*`.
+- A per-rule match counter, shown next to the key and value once a rule has matched a request.
+- Import and export of the whole rule list as JSON, from a new menu next to Add rule that also holds curl import.
+- Response header injection, alongside the existing request header injection.
+- Append mode for header rules, alongside the existing set/replace behavior.
+- "Only if absent" mode for cookie rules, so a rule does not overwrite a cookie the site already set.
+- Resource type targeting for header rules, so a rule can apply only to specific request types instead of every type.
+- Cookie attribute control: `SameSite`, `Secure`, and an expiry, in place of the previous fixed session cookie.
+- Value templating with `{{random}}`, `{{timestamp}}`, and `{{uuid}}` placeholders. A header rule's placeholders re-roll on a fixed interval; a cookie rule's re-roll on every navigation.
+- A bundle variable: one named variable per bundle with a list of named choices, substituted for `{{name}}` in that bundle's rules. Click the bundle's pill to switch choices.
+- A kill switch that pauses every rule, and clears already-applied cookies, without touching the stored rules.
+- A red badge on the toolbar icon while the kill switch is on, and a matching greyed-out look for every rule in the popup while paused.
+- Smart Import, next to curl import: extracts headers and cookies from pasted text that is not a curl command using Chrome's on-device Prompt API. Runs locally, only where that API is available, and only on the same review screen every import already uses.
+- The import preview screen suggests an existing bundle whose own match pattern already covers the imported URL, instead of always defaulting to a new bundle.
+
+### Fixed
+
+- Toggling the value-visibility switch or the kill switch collapsed every expanded bundle back to closed. An expanded bundle now stays expanded across any change to the rule list.
+
 ## [1.0.0] - 2026-09-02
 
 ### Added
@@ -27,5 +51,6 @@ This file records the notable changes to CookieJab. The format follows [Keep a C
 - The URL field is a Chrome match pattern with scheme, host, and path. Before this change, CookieJab matched the field as a substring. When the query string of a URL on another origin contained the pattern, the pattern also matched that URL.
 - Cookies get path `/` so that they apply to the whole site.
 
-[Unreleased]: https://github.com/amocsub/CookieJab/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/amocsub/CookieJab/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/amocsub/CookieJab/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/amocsub/CookieJab/releases/tag/v1.0.0

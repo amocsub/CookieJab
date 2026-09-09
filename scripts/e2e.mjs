@@ -161,6 +161,72 @@ try {
   const dnr2 = await popup.eval("chrome.declarativeNetRequest.getDynamicRules()");
   check("three dynamic rules after saving a header rule", dnr2.length === 3, String(dnr2.length));
 
+  // Kill switch: pauses the header rule and clears the applied cookie, then resumes.
+  await popup.eval("chrome.storage.local.set({ killSwitch: true })");
+  await sleep(500);
+  const dnrPaused = await popup.eval("chrome.declarativeNetRequest.getDynamicRules()");
+  check("kill switch removes every dynamic rule", dnrPaused.length === 0, String(dnrPaused.length));
+  await page.navigate(`http://localhost:${PORT}/headers`);
+  echo = JSON.parse(await page.eval("document.body.innerText"));
+  check("kill switch stops the header rule from firing", echo.headers["x-cookiejab"] === undefined, JSON.stringify(echo.headers["x-cookiejab"]));
+  await popup.eval("chrome.storage.local.set({ killSwitch: false })");
+  await sleep(500);
+  const dnrResumed = await popup.eval("chrome.declarativeNetRequest.getDynamicRules()");
+  check("kill switch off resumes the rules", dnrResumed.length === 3, String(dnrResumed.length));
+
+  // Append mode, response side, and resource type targeting on a header rule.
+  const appendRule = {
+    id: "append", enabled: true, type: "header", url: "*://localhost/*",
+    key: "X-CookieJab", value: "2", mode: "append"
+  };
+  await setRules([...rules, appendRule]);
+  await page.navigate(`http://localhost:${PORT}/headers`);
+  echo = JSON.parse(await page.eval("document.body.innerText"));
+  check("append mode adds a second header instance", echo.headers["x-cookiejab"] === "1, 2", JSON.stringify(echo.headers["x-cookiejab"]));
+
+  const responseRule = {
+    id: "resp", enabled: true, type: "header", url: "*://localhost/*",
+    key: "X-CookieJab-Resp", value: "r", side: "response"
+  };
+  await setRules([...rules, responseRule]);
+  await page.navigate(`http://localhost:${PORT}/headers`);
+  const respHeader = await page.eval(`(async () => {
+    const res = await fetch(location.href);
+    return res.headers.get("x-cookiejab-resp");
+  })()`);
+  check("response side sets a response header", respHeader === "r", String(respHeader));
+
+  const scopedRule = {
+    id: "scoped", enabled: true, type: "header", url: "*://localhost/*",
+    key: "X-Scoped", value: "s", resourceTypes: ["image"]
+  };
+  await setRules([...rules, scopedRule]);
+  await page.navigate(`http://localhost:${PORT}/headers`);
+  echo = JSON.parse(await page.eval("document.body.innerText"));
+  check("a rule scoped to image requests does not fire on the main frame", echo.headers["x-scoped"] === undefined, JSON.stringify(echo.headers["x-scoped"]));
+
+  // Cookie attributes and "only if absent" mode.
+  const attrRule = {
+    id: "attr", enabled: true, type: "cookie", url: "*://localhost/*",
+    key: "cj-attr", value: "1", cookieAttrs: { sameSite: "strict", secure: false, expiresInSeconds: 3600 }
+  };
+  await setRules([...rules, attrRule]);
+  await page.navigate(`http://localhost:${PORT}/cookies`);
+  await sleep(300);
+  const attrCookie = (await popup.eval("chrome.cookies.getAll({ name: 'cj-attr' })"))[0];
+  check("cookie attribute rule sets sameSite and an expiry", attrCookie?.sameSite === "strict" && Boolean(attrCookie?.expirationDate), JSON.stringify(attrCookie));
+
+  // cj=1 is already set on localhost from rule c, exercised earlier in this script.
+  const absentOnly = rules
+    .filter((r) => r.id !== "c")
+    .concat([{ ...rules.find((r) => r.id === "c"), id: "absent-target", mode: "absent", value: "changed" }]);
+  await setRules(absentOnly);
+  await page.navigate(`http://localhost:${PORT}/cookies`);
+  await sleep(300);
+  const afterAbsent = (await popup.eval("chrome.cookies.getAll({ name: 'cj' })"))[0];
+  check("absent mode does not overwrite an existing cookie", afterAbsent?.value === "1", JSON.stringify(afterAbsent));
+  await setRules(rules);
+
   popup.ws.close(); page.ws.close();
 } catch (e) {
   check("script completed", false, String(e.stack || e));

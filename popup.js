@@ -1,5 +1,8 @@
-import { parseMatchPattern, toDnrCondition } from "./match-pattern.js";
+import { parseMatchPattern, matchesUrl, toDnrCondition, RESOURCE_TYPES } from "./match-pattern.js";
 import { parseCurl, defaultPatternFor } from "./curl-import.js";
+import { buildPrompt, parseModelOutput } from "./smart-import.js";
+import { parseImportedRules } from "./json-import.js";
+import { loadRules, saveRules } from "./rules-store.js";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -9,10 +12,13 @@ const formEl = $("#rule-form");
 const formErrorEl = $("#form-error");
 const lastErrorEl = $("#last-error");
 const visibilityBtn = $("#visibility-btn");
+const killSwitchBtn = $("#kill-switch-btn");
 const bundleFormEl = $("#bundle-form");
 const bundleFormErrorEl = $("#bundle-form-error");
+const importMenuEl = $("#import-menu");
 const importPasteEl = $("#import-paste");
 const importPreviewEl = $("#import-preview");
+const importJsonEl = $("#import-json");
 let importItems = [];
 
 const TYPES = new Set(["header", "cookie"]);
@@ -23,13 +29,60 @@ const HINTS = {
 // RFC 7230 token. Valid for header names and cookie names.
 const TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
 
+const MODES = {
+  header: [["set", "Set", "Set / replace"], ["append", "Append", "Append"]],
+  cookie: [["set", "Set", "Set / replace"], ["absent", "Absent", "Only if absent"]]
+};
+
+// A row of buttons, one selected at a time via aria-pressed, in place of a
+// native <select> whose open popup list cannot be restyled to match the app.
+function segValue(container) {
+  return container.querySelector('button[aria-pressed="true"]')?.dataset.value ?? "";
+}
+
+function setSegValue(container, value) {
+  for (const b of container.querySelectorAll("button")) {
+    b.setAttribute("aria-pressed", String(b.dataset.value === value));
+  }
+}
+
+function initSeg(container) {
+  container.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    setSegValue(container, btn.dataset.value);
+  });
+}
+
+initSeg($("#f-mode"));
+initSeg($("#f-side"));
+initSeg($("#f-samesite"));
+
+for (const t of RESOURCE_TYPES) {
+  const label = document.createElement("label");
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.value = t;
+  label.append(checkbox, document.createTextNode(t));
+  $("#f-resource-types").append(label);
+}
+
+// Clicking a checked chip a second time unchecks it, going back to
+// "match every resource type", instead of a native multi-select's
+// click-always-selects-only-this-one behavior.
+$("#f-resource-types").addEventListener("change", (e) => {
+  e.target.closest("label").classList.toggle("checked", e.target.checked);
+  // Otherwise the checkbox keeps focus after a click, and the focus outline
+  // sticks around instead of only showing while actually hovering.
+  e.target.blur();
+});
+
 async function getRules() {
-  const { rules = [] } = await chrome.storage.local.get("rules");
-  return rules;
+  return loadRules();
 }
 
 async function setRules(rules) {
-  await chrome.storage.local.set({ rules });
+  await saveRules(rules);
 }
 
 function el(tag, className, text) {
@@ -65,10 +118,19 @@ function groupRules(rules) {
 const CODES = { header: "HDR", cookie: "CKI", invalid: "INV" };
 const MASK = "••••••••";
 let hideValues = true;
+let matchCounts = {};
+let killSwitchOn = false;
+
+// A rule looks disabled while the kill switch pauses everything, even if its
+// own switch is on, but the switch itself keeps showing and controlling the
+// rule's real enabled state, since that is what takes effect on resume.
+function looksDisabled(r) {
+  return !r.enabled || killSwitchOn;
+}
 
 function ruleRow(r) {
   const type = TYPES.has(r.type) ? r.type : "invalid";
-  const row = el("div", `rule-row ${type}` + (r.enabled ? "" : " disabled"));
+  const row = el("div", `rule-row ${type}` + (looksDisabled(r) ? " disabled" : ""));
 
   const toggle = el("label", "rule-toggle");
   const checkbox = el("input");
@@ -87,6 +149,12 @@ function ruleRow(r) {
   const valueEl = el("span", "v", hideValues ? MASK : (r.value ?? ""));
   if (hideValues) valueEl.title = "Value hidden";
   kv.append(el("span", "k", r.key), valueEl);
+  const count = matchCounts[r.id]?.count;
+  if (count) {
+    const countEl = el("span", "rule-count", `×${count}`);
+    countEl.title = "Times this rule has matched a request.";
+    kv.append(countEl);
+  }
   body.append(top, url, kv);
 
   const actions = el("div", "rule-actions");
@@ -107,14 +175,14 @@ function ruleRow(r) {
 
 function renderStandaloneRule(r) {
   const type = TYPES.has(r.type) ? r.type : "invalid";
-  const li = el("li", `rule type-${type}` + (r.enabled ? "" : " disabled"));
+  const li = el("li", `rule type-${type}` + (looksDisabled(r) ? " disabled" : ""));
   li.append(...ruleRow(r).children);
   return li;
 }
 
 function renderBundleMember(r) {
   const type = TYPES.has(r.type) ? r.type : "invalid";
-  const li = el("li", `bundle-member type-${type}` + (r.enabled ? "" : " disabled"));
+  const li = el("li", `bundle-member type-${type}` + (looksDisabled(r) ? " disabled" : ""));
   li.append(...ruleRow(r).children);
   return li;
 }
@@ -139,8 +207,10 @@ function stopSummaryToggleForButton(el) {
 function renderBundle(name, rules) {
   const on = rules.filter((r) => r.enabled).length;
   const bundleUrl = rules.find((r) => r.bundleUrl)?.bundleUrl ?? "";
+  const bundleVar = rules.find((r) => r.bundleVar)?.bundleVar ?? null;
   const li = el("li", "bundle");
   const details = document.createElement("details");
+  details.dataset.bundle = name;
   const summary = document.createElement("summary");
   summary.className = "bundle-head";
 
@@ -173,7 +243,16 @@ function renderBundle(name, rules) {
   del.dataset.bundleDel = name;
   actions.append(stopSummaryToggleForButton(edit), stopSummaryToggleForButton(copy), stopSummaryToggleForButton(del));
 
-  summary.append(chevron, toggle, el("span", "bundle-name", name), actions);
+  summary.append(chevron, toggle, el("span", "bundle-name", name));
+  if (bundleVar) {
+    const choice = bundleVar.choices?.[bundleVar.selected];
+    const pill = el("button", "bundle-var", choice?.label ?? bundleVar.name);
+    pill.type = "button";
+    pill.title = `Variable ${bundleVar.name}. Click to switch choices.`;
+    pill.dataset.bundleVarCycle = name;
+    summary.append(stopSummaryToggleForButton(pill));
+  }
+  summary.append(actions);
 
   const rest = [];
   if (bundleUrl) {
@@ -196,8 +275,17 @@ function renderGroup(g) {
 }
 
 async function render() {
-  const { rules = [], lastError = null } = await chrome.storage.local.get(["rules", "lastError"]);
+  const rules = await getRules();
+  const { lastError = null, matchCounts: counts = {} } = await chrome.storage.local.get(["lastError", "matchCounts"]);
+  matchCounts = counts;
+  // Every render rebuilds the list from scratch, so a bundle's <details>
+  // element is a brand new node each time and defaults to closed -- carry
+  // over which bundles were open before this render, by name.
+  const openBundles = new Set([...listEl.querySelectorAll("details[open]")].map((d) => d.dataset.bundle));
   listEl.replaceChildren(...groupRules(rules).map(renderGroup));
+  for (const details of listEl.querySelectorAll("details")) {
+    if (openBundles.has(details.dataset.bundle)) details.open = true;
+  }
   emptyEl.hidden = rules.length > 0;
   lastErrorEl.hidden = !lastError;
   lastErrorEl.textContent = lastError || "";
@@ -215,6 +303,17 @@ async function loadVisibility() {
   applyVisibility();
 }
 
+function applyKillSwitch(on) {
+  killSwitchOn = on;
+  killSwitchBtn.setAttribute("aria-pressed", String(on));
+  killSwitchBtn.title = on ? "Resume all rules" : "Pause all rules";
+}
+
+async function loadKillSwitch() {
+  const { killSwitch = false } = await chrome.storage.local.get("killSwitch");
+  applyKillSwitch(killSwitch);
+}
+
 function showFormError(message) {
   formErrorEl.textContent = message || "";
   formErrorEl.hidden = !message;
@@ -226,14 +325,25 @@ function showBundleFormError(message) {
 }
 
 function setType(type) {
+  const modeContainer = $("#f-mode");
+  const prevMode = segValue(modeContainer);
   $("#f-type").value = type;
-  for (const b of document.querySelectorAll("#rule-form .seg button")) {
+  for (const b of document.querySelectorAll("#f-type-seg button")) {
     b.setAttribute("aria-pressed", String(b.dataset.type === type));
   }
   $("#save-btn").classList.toggle("type-header", type === "header");
   $("#save-btn").classList.toggle("type-cookie", type === "cookie");
   formEl.classList.toggle("type-header", type === "header");
   formEl.classList.toggle("type-cookie", type === "cookie");
+  modeContainer.replaceChildren(...MODES[type].map(([value, label, title]) => {
+    const b = el("button", null, label);
+    b.type = "button";
+    b.dataset.value = value;
+    b.title = title;
+    b.setAttribute("aria-pressed", "false");
+    return b;
+  }));
+  setSegValue(modeContainer, MODES[type].some(([value]) => value === prevMode) ? prevMode : "set");
   showHint();
 }
 
@@ -245,6 +355,7 @@ function showForm(rule) {
   hideBundleForm();
   hideImportPaste();
   hideImportPreview();
+  hideImportJson();
   $("#rule-id").value = rule?.id ?? "";
   $("#f-bundle").value = bundleOf(rule ?? {});
   setType(rule?.type ?? "header");
@@ -252,6 +363,16 @@ function showForm(rule) {
   $("#f-url").value = rule?.url ?? "";
   $("#f-key").value = rule?.key ?? "";
   $("#f-value").value = rule?.value ?? "";
+  setSegValue($("#f-mode"), rule?.mode ?? "set");
+  setSegValue($("#f-side"), rule?.side === "response" ? "response" : "request");
+  for (const checkbox of $("#f-resource-types").querySelectorAll("input")) {
+    checkbox.checked = Boolean(rule?.resourceTypes?.includes(checkbox.value));
+    checkbox.closest("label").classList.toggle("checked", checkbox.checked);
+  }
+  const attrs = rule?.cookieAttrs ?? {};
+  setSegValue($("#f-samesite"), attrs.sameSite ?? "");
+  $("#f-secure").checked = Boolean(attrs.secure);
+  $("#f-expires").value = attrs.expiresInSeconds ?? "";
   const overrideEl = $("#f-url-override");
   overrideEl.hidden = !rule?.bundleUrl;
   overrideEl.textContent = rule?.bundleUrl
@@ -273,9 +394,13 @@ function showBundleForm(name, rules) {
   hideForm();
   hideImportPaste();
   hideImportPreview();
+  hideImportJson();
   $("#b-old-name").value = name;
   $("#b-name").value = name;
   $("#b-url").value = rules.find((r) => r.bundleUrl)?.bundleUrl ?? "";
+  const bundleVar = rules.find((r) => r.bundleVar)?.bundleVar ?? null;
+  $("#b-var-name").value = bundleVar?.name ?? "";
+  $("#b-var-choices").value = bundleVar?.choices?.map((c) => `${c.label}=${c.value}`).join("\n") ?? "";
   showBundleFormError(null);
   bundleFormEl.hidden = false;
   $("#b-name").focus();
@@ -305,12 +430,17 @@ function showImportPreviewError(message) {
   el.hidden = !message;
 }
 
-function showImportPaste() {
+function showImportPaste(mode = "curl") {
   hideForm();
   hideBundleForm();
   hideImportPreview();
+  hideImportJson();
   $("#import-text").value = "";
   showImportPasteError(null);
+  $("#import-paste-curl-hint").hidden = mode !== "curl";
+  $("#import-paste-smart-hint").hidden = mode !== "smart";
+  $("#import-parse-btn").hidden = mode !== "curl";
+  smartImportBtn.hidden = mode !== "smart";
   importPasteEl.hidden = false;
   $("#import-text").focus();
 }
@@ -370,6 +500,26 @@ function renderImportItems() {
   updateImportConfirmState();
 }
 
+// The first existing bundle whose own match pattern, or one of its
+// members' patterns, already covers this url -- a plain pattern match
+// against what is already on the rule list, not a guess.
+function suggestBundle(rules, bundles, url) {
+  if (!url) return null;
+  for (const name of bundles) {
+    const members = rules.filter((r) => bundleOf(r) === name);
+    const bundleUrl = members.find((r) => r.bundleUrl)?.bundleUrl;
+    const patterns = bundleUrl ? [bundleUrl] : members.map((r) => r.url).filter(Boolean);
+    for (const p of patterns) {
+      try {
+        if (matchesUrl(parseMatchPattern(p), url)) return name;
+      } catch {
+        // A pattern that no longer parses is not a match.
+      }
+    }
+  }
+  return null;
+}
+
 async function showImportPreview(parsed, defaultUrl) {
   importItems = [
     ...parsed.headers.map((h) => ({ type: "header", name: h.name, value: h.value, checked: false, validKey: TOKEN.test(h.name) })),
@@ -393,7 +543,7 @@ async function showImportPreview(parsed, defaultUrl) {
     o.value = b;
     destSel.append(o);
   }
-  destSel.value = "";
+  destSel.value = suggestBundle(rules, bundles, parsed.url) ?? "";
 
   let host = "";
   try {
@@ -413,6 +563,30 @@ function hideImportPreview() {
   importPreviewEl.hidden = true;
   showImportPreviewError(null);
   importItems = [];
+}
+
+function showJsonImportError(message) {
+  const el = $("#json-import-error");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
+async function showImportJson() {
+  hideForm();
+  hideBundleForm();
+  hideImportPaste();
+  hideImportPreview();
+  const rules = await getRules();
+  $("#json-export-text").value = JSON.stringify(rules, null, 2);
+  $("#json-import-text").value = "";
+  $("#json-import-replace").checked = false;
+  showJsonImportError(null);
+  importJsonEl.hidden = false;
+}
+
+function hideImportJson() {
+  importJsonEl.hidden = true;
+  showJsonImportError(null);
 }
 
 function updateImportDestRow() {
@@ -444,6 +618,9 @@ async function validate(rule) {
     const err = await checkHeaderRegexSupport(pattern);
     if (err) return { error: err };
   }
+  if (rule.type === "cookie" && rule.cookieAttrs?.sameSite === "no_restriction" && !rule.cookieAttrs.secure) {
+    return { error: "SameSite=None requires the Secure attribute." };
+  }
   return { pattern };
 }
 
@@ -460,13 +637,50 @@ visibilityBtn.addEventListener("click", async () => {
   if (!importPreviewEl.hidden) renderImportItems();
 });
 
+killSwitchBtn.addEventListener("click", async () => {
+  const { killSwitch = false } = await chrome.storage.local.get("killSwitch");
+  applyKillSwitch(!killSwitch);
+  render();
+  await chrome.storage.local.set({ killSwitch: !killSwitch });
+  // This button is never rebuilt by render(), unlike almost every other
+  // button in the popup, so it would otherwise keep Chrome's persistent
+  // post-click focus ring showing after the click.
+  killSwitchBtn.blur();
+});
+
+function hideImportMenu() {
+  importMenuEl.hidden = true;
+  $("#import-btn").setAttribute("aria-expanded", "false");
+  $("#import-btn").blur();
+}
+
 $("#import-btn").addEventListener("click", () => {
-  if (!importPasteEl.hidden || !importPreviewEl.hidden) {
-    hideImportPaste();
-    hideImportPreview();
-  } else {
-    showImportPaste();
-  }
+  const open = importMenuEl.hidden;
+  importMenuEl.hidden = !open;
+  $("#import-btn").setAttribute("aria-expanded", String(open));
+  $("#import-btn").blur();
+});
+
+document.addEventListener("click", (e) => {
+  if (!importMenuEl.hidden && !e.target.closest(".split-btn")) hideImportMenu();
+});
+
+$("#import-curl-btn").addEventListener("click", () => {
+  hideImportMenu();
+  showImportPaste("curl");
+});
+
+const smartImportMenuBtn = $("#import-smart-menu-btn");
+if (typeof LanguageModel !== "undefined") smartImportMenuBtn.hidden = false;
+
+smartImportMenuBtn.addEventListener("click", () => {
+  hideImportMenu();
+  showImportPaste("smart");
+});
+
+$("#import-json-btn").addEventListener("click", async () => {
+  hideImportMenu();
+  await showImportJson();
 });
 
 $("#import-paste-btn").addEventListener("click", async () => {
@@ -480,18 +694,75 @@ $("#import-paste-btn").addEventListener("click", async () => {
 
 $("#import-paste-cancel-btn").addEventListener("click", hideImportPaste);
 
-$("#import-parse-btn").addEventListener("click", () => {
-  const parsed = parseCurl($("#import-text").value);
-  const pattern = defaultPatternFor(parsed.url ?? "");
-  if (!pattern) {
-    showImportPasteError("No web address was found in that text.");
-    return;
-  }
+// Shared by the deterministic curl parser and smart import: both produce
+// the same { url, headers, cookies } shape for the same review screen.
+function finishParse(parsed) {
   if (!parsed.headers.length && !parsed.cookies.length) {
-    showImportPasteError("No headers or cookies were found in that command.");
+    showImportPasteError("No headers or cookies were found in that text.");
+    return false;
+  }
+  // A missing match pattern is only a problem at Import time, not here --
+  // the preview screen's own field lets the user type or fix one by hand.
+  showImportPreview(parsed, defaultPatternFor(parsed.url ?? ""));
+  return true;
+}
+
+$("#import-parse-btn").addEventListener("click", () => {
+  finishParse(parseCurl($("#import-text").value));
+});
+
+const smartImportBtn = $("#import-smart-btn");
+const SMART_IMPORT_LABEL = "Smart import";
+
+function setSmartImportBusy(busy) {
+  smartImportBtn.disabled = busy;
+  if (busy) smartImportBtn.replaceChildren(el("span", "spinner"), document.createTextNode("Analyzing…"));
+  else smartImportBtn.textContent = SMART_IMPORT_LABEL;
+}
+
+smartImportBtn.addEventListener("click", async () => {
+  const text = $("#import-text").value;
+  if (!text.trim()) {
+    showImportPasteError("Paste something to analyze first.");
     return;
   }
-  showImportPreview(parsed, pattern);
+  showImportPasteError(null);
+  // Whether the model still needs a one-time install is Chrome's business,
+  // not the user's -- show the same busy state either way, never mention a
+  // download or a percentage.
+  setSmartImportBusy(true);
+  try {
+    // Both calls need the same language expectations: availability() checks
+    // whether this device supports the model for that language, and
+    // create() is refused (or warns, per the console error this fixed) when
+    // called without it.
+    const languageOptions = {
+      expectedInputs: [{ type: "text", languages: ["en"] }],
+      expectedOutputs: [{ type: "text", languages: ["en"] }]
+    };
+    const availability = await LanguageModel.availability(languageOptions);
+    if (availability === "unavailable") {
+      showImportPasteError("On-device AI is not available on this device.");
+      return;
+    }
+    const session = await LanguageModel.create(languageOptions);
+    try {
+      const raw = await session.prompt(buildPrompt(text));
+      const { parsed, error } = parseModelOutput(raw);
+      if (error || !parsed) {
+        showImportPasteError(error || "The model did not return anything usable.");
+        return;
+      }
+      finishParse(parsed);
+    } finally {
+      session.destroy?.();
+    }
+  } catch (e) {
+    showImportPasteError(`Smart import failed: ${e.message || e}`);
+  } finally {
+    setSmartImportBusy(false);
+    smartImportBtn.blur();
+  }
 });
 
 $("#import-items").addEventListener("change", (e) => {
@@ -588,11 +859,58 @@ $("#import-confirm-btn").addEventListener("click", async () => {
   render();
 });
 
+$("#json-export-copy-btn").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText($("#json-export-text").value);
+  } catch {
+    // Clipboard access was not available. The text is still selectable by hand.
+  }
+});
+
+$("#json-export-download-btn").addEventListener("click", () => {
+  const blob = new Blob([$("#json-export-text").value], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "cookiejab-rules.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+$("#json-import-cancel-btn").addEventListener("click", hideImportJson);
+
+$("#json-import-btn").addEventListener("click", async () => {
+  const { rules: parsedRules, errors } = parseImportedRules($("#json-import-text").value);
+  if (errors.length) {
+    showJsonImportError(errors.join("\n"));
+    return;
+  }
+  if (!parsedRules.length) {
+    showJsonImportError("No rules were found in that text.");
+    return;
+  }
+
+  for (const r of parsedRules) {
+    const { pattern, error } = await validate(r);
+    if (error) {
+      showJsonImportError(`${r.key || r.url}: ${error}`);
+      return;
+    }
+    r.url = pattern.canonical;
+  }
+
+  const existing = $("#json-import-replace").checked ? [] : await getRules();
+  const imported = parsedRules.map((r) => ({ ...r, id: crypto.randomUUID() }));
+  await setRules([...existing, ...imported]);
+  hideImportJson();
+  render();
+});
+
 $("#cancel-btn").addEventListener("click", hideForm);
 $("#bundle-cancel-btn").addEventListener("click", hideBundleForm);
 $("#f-type").addEventListener("change", showHint);
 
-for (const b of document.querySelectorAll("#rule-form .seg button")) {
+for (const b of document.querySelectorAll("#f-type-seg button")) {
   b.addEventListener("click", () => setType(b.dataset.type));
 }
 
@@ -604,15 +922,30 @@ formEl.addEventListener("submit", async (e) => {
   const bundleUrl = bundle
     ? (rules.find((r) => r.id !== id && bundleOf(r) === bundle && r.bundleUrl)?.bundleUrl ?? "")
     : "";
+  const bundleVar = bundle
+    ? (rules.find((r) => r.id !== id && bundleOf(r) === bundle && r.bundleVar)?.bundleVar ?? null)
+    : null;
+  const type = TYPES.has($("#f-type").value) ? $("#f-type").value : "header";
+  const resourceTypes = [...$("#f-resource-types").querySelectorAll("input:checked")].map((c) => c.value);
+  const sameSite = segValue($("#f-samesite"));
+  const secure = $("#f-secure").checked;
+  const expiresInSeconds = $("#f-expires").value ? Number($("#f-expires").value) : null;
+  const cookieAttrs = sameSite || secure || expiresInSeconds ? { sameSite: sameSite || null, secure, expiresInSeconds } : null;
+
   const rule = {
     id: id || crypto.randomUUID(),
     enabled: true,
     bundle,
     bundleUrl,
-    type: TYPES.has($("#f-type").value) ? $("#f-type").value : "header",
+    bundleVar,
+    type,
     url: $("#f-url").value.trim(),
     key: $("#f-key").value.trim(),
-    value: $("#f-value").value
+    value: $("#f-value").value,
+    mode: segValue($("#f-mode")),
+    side: type === "header" ? segValue($("#f-side")) : "request",
+    resourceTypes: type === "header" && resourceTypes.length ? resourceTypes : null,
+    cookieAttrs: type === "cookie" ? cookieAttrs : null
   };
 
   const { pattern, error } = await validate(rule);
@@ -670,9 +1003,31 @@ bundleFormEl.addEventListener("submit", async (e) => {
     bundleUrl = pattern.canonical;
   }
 
+  const varName = $("#b-var-name").value.trim();
+  let bundleVar = null;
+  if (varName) {
+    const choices = $("#b-var-choices").value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const idx = line.indexOf("=");
+        return idx > 0 ? { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() } : null;
+      })
+      .filter(Boolean);
+    if (!choices.length) {
+      showBundleFormError("Add at least one choice, as label=value.");
+      return;
+    }
+    const prevVar = members.find((r) => r.bundleVar)?.bundleVar;
+    const selected = prevVar && prevVar.name === varName && prevVar.selected < choices.length ? prevVar.selected : 0;
+    bundleVar = { name: varName, choices, selected };
+  }
+
   for (const r of members) {
     r.bundle = newName;
     r.bundleUrl = bundleUrl;
+    r.bundleVar = bundleVar;
   }
   await setRules(rules);
   hideBundleForm();
@@ -686,6 +1041,7 @@ listEl.addEventListener("click", async (e) => {
   const bundleEdit = e.target.dataset.bundleEdit;
   const bundleCopy = e.target.dataset.bundleCopy;
   const bundleDel = e.target.dataset.bundleDel;
+  const bundleVarCycle = e.target.dataset.bundleVarCycle;
 
   if (editId) {
     const rules = await getRules();
@@ -716,6 +1072,16 @@ listEl.addEventListener("click", async (e) => {
     const rules = (await getRules()).filter((r) => bundleOf(r) !== bundleDel);
     await setRules(rules);
     render();
+  } else if (bundleVarCycle) {
+    const rules = await getRules();
+    const members = rules.filter((r) => bundleOf(r) === bundleVarCycle && r.bundleVar);
+    const bundleVar = members[0]?.bundleVar;
+    if (bundleVar?.choices?.length) {
+      const selected = (bundleVar.selected + 1) % bundleVar.choices.length;
+      for (const r of members) r.bundleVar = { ...r.bundleVar, selected };
+      await setRules(rules);
+      render();
+    }
   }
 });
 
@@ -740,10 +1106,16 @@ listEl.addEventListener("change", async (e) => {
   }
 });
 
-// The service worker writes lastError after each sync.
+// The service worker writes lastError, matchCounts, and rules (on sync from
+// another device or a fallback save) outside of this popup's own writes.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes.lastError) render();
+  if (area === "local" && (changes.lastError || changes.matchCounts)) render();
+  if (area === "local" && changes.killSwitch) {
+    applyKillSwitch(changes.killSwitch.newValue ?? false);
+    render();
+  }
+  if ((area === "sync" || area === "local") && changes.rules) render();
 });
 
 loadVisibility();
-render();
+loadKillSwitch().then(render);

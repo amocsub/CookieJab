@@ -35,44 +35,71 @@ export function parseMatchPattern(input) {
 
   const rest = s.slice(schemeEnd + 3);
   const slash = rest.indexOf("/");
-  let hostPort = slash === -1 ? rest : rest.slice(0, slash);
+  let hostPort = (slash === -1 ? rest : rest.slice(0, slash)).toLowerCase();
   const path = slash === -1 ? "/*" : rest.slice(slash);
 
-  if (hostPort.startsWith("[")) throw new Error("IPv6 hosts are not supported.");
-
   let port = null;
-  const colon = hostPort.indexOf(":");
-  if (colon !== -1) {
-    port = hostPort.slice(colon + 1);
-    hostPort = hostPort.slice(0, colon);
-    if (!/^\d{1,5}$/.test(port) || Number(port) > 65535) {
-      throw new Error(`Port "${port}" is not valid.`);
-    }
-  }
+  let host;
 
-  let host = hostPort.toLowerCase();
-  if (!host) throw new Error("Host is required.");
-
-  if (host !== "*") {
-    let wildcard = false;
-    if (host.startsWith("*.")) {
-      wildcard = true;
-      host = host.slice(2);
+  if (hostPort.startsWith("[")) {
+    const close = hostPort.indexOf("]");
+    if (close === -1) throw new Error(`Host "${hostPort}" is not valid.`);
+    const literal = hostPort.slice(1, close);
+    const after = hostPort.slice(close + 1);
+    if (after) {
+      if (!after.startsWith(":")) throw new Error(`Host "${hostPort}" is not valid.`);
+      port = after.slice(1);
+      if (!/^\d{1,5}$/.test(port) || Number(port) > 65535) {
+        throw new Error(`Port "${port}" is not valid.`);
+      }
     }
-    if (host.includes("*")) {
-      throw new Error("In the host, * is permitted only as the first label, for example *.example.com.");
-    }
-    if (!host) throw new Error("Host is required.");
     let u;
     try {
-      u = new URL("http://" + host + "/");
+      u = new URL("http://[" + literal + "]/");
     } catch {
-      throw new Error(`Host "${host}" is not valid.`);
+      throw new Error(`Host "${hostPort}" is not valid.`);
     }
     const clean = u.username === "" && u.password === "" && u.port === "" &&
       u.pathname === "/" && u.search === "" && u.hash === "";
-    if (!clean) throw new Error(`Host "${host}" is not valid.`);
-    host = wildcard ? "*." + u.hostname : u.hostname;
+    if (!clean) throw new Error(`Host "${hostPort}" is not valid.`);
+    host = u.hostname;
+  } else {
+    const colon = hostPort.indexOf(":");
+    if (colon !== -1) {
+      port = hostPort.slice(colon + 1);
+      hostPort = hostPort.slice(0, colon);
+      if (!/^\d{1,5}$/.test(port) || Number(port) > 65535) {
+        throw new Error(`Port "${port}" is not valid.`);
+      }
+    }
+
+    host = hostPort;
+    if (!host) throw new Error("Host is required.");
+
+    if (host !== "*") {
+      let wildcard = false;
+      if (host.startsWith("*.")) {
+        wildcard = true;
+        host = host.slice(2);
+      }
+      if (host.includes("*")) {
+        throw new Error("In the host, * is permitted only as the first label, for example *.example.com.");
+      }
+      if (!host) throw new Error("Host is required.");
+      if (host.startsWith("[")) {
+        throw new Error("A wildcard host cannot be an IPv6 address.");
+      }
+      let u;
+      try {
+        u = new URL("http://" + host + "/");
+      } catch {
+        throw new Error(`Host "${host}" is not valid.`);
+      }
+      const clean = u.username === "" && u.password === "" && u.port === "" &&
+        u.pathname === "/" && u.search === "" && u.hash === "";
+      if (!clean) throw new Error(`Host "${host}" is not valid.`);
+      host = wildcard ? "*." + u.hostname : u.hostname;
+    }
   }
 
   const canonical = `${scheme}://${host}${port ? ":" + port : ""}${path}`;
@@ -138,7 +165,7 @@ export function toDnrCondition(pattern) {
   const regexFilter = "^" + scheme + "://" + host + port + path + end;
 
   const condition = { regexFilter, isUrlFilterCaseSensitive: true, resourceTypes: RESOURCE_TYPES };
-  if (pattern.host !== "*") {
+  if (pattern.host !== "*" && !pattern.host.startsWith("[")) {
     condition.requestDomains = [pattern.host.replace(/^\*\./, "")];
   }
   return condition;
